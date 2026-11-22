@@ -255,8 +255,11 @@ public static class OverlayPureTest {
     var f=OverlayFeatures.FromIdentity(id);
     Check(f.Has("volume")&&f.Has("card-new")&&f.Has("EXE-FROM-DISC")&&!f.Has("pause"),"identity features are read, trimmed and case-blind");
     Check(!OverlayLayout.Enabled("pause",f)&&!OverlayLayout.Enabled("fullscreen",f),"the 2.0 game build's features offer no live control");
-    var guess=new OverlayFeatures(new[]{"pause","restart","fullscreen","volume","screenshot","live-control"});
-    Check(!OverlayLayout.Enabled("pause",guess)&&!OverlayLayout.Enabled("fullscreen",guess),"a feature named like the control is not enough: the contract has not named it, so nothing is guessed");
+    var guess=new OverlayFeatures(new[]{"pause","restart","fullscreen","volume","screenshot"});
+    Check(!OverlayLayout.Enabled("pause",guess)&&!OverlayLayout.Enabled("fullscreen",guess)&&!OverlayLayout.Enabled("volume",guess)&&!OverlayLayout.Enabled("screenshot",guess),"a feature named like the control is not enough: only the contract's word (live-control) offers them");
+    var live=new OverlayFeatures(new[]{OverlayLayout.LiveControl});
+    Check(OverlayLayout.Enabled("pause",live)&&OverlayLayout.Enabled("fullscreen",live)&&OverlayLayout.Enabled("volume",live)&&OverlayLayout.Enabled("screenshot",live)&&OverlayLayout.Enabled("speed",live)&&!OverlayLayout.Enabled("speed",guess),"live-control offers pause, fullscreen, volume and screenshot");
+    Check(!OverlayLayout.Offered("restart",live)&&OverlayLayout.Enabled("stop",live)&&OverlayLayout.Enabled("menu",live),"live-control does not touch Restart (the launcher's own); Stop and Menu always work");
     Check(OverlayFeatures.FromIdentity(null)==OverlayFeatures.None&&OverlayFeatures.FromIdentity(new Dictionary<string,string>())==OverlayFeatures.None,"no identity, no features");
     Check(!OverlayFeatures.None.Has(null)&&!OverlayFeatures.None.Has(""),"empty names are never present");
   }

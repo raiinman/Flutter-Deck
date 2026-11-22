@@ -18,8 +18,8 @@ using System.Xml;
 //  - The launcher owns the memory card, the key map and the session folder for this game.
 //  - A memory card is only ever copied in from a file the user picks, and never over an existing card.
 //  - The program's SHA-256 is checked at every start; an unknown build needs the user's acknowledgement of that exact hash.
-public sealed class RuntimeSettings { public string Program="",AcceptedHash=""; public int Scale=3,Volume=100; public bool Mute=false,OriginalPicture=false,OriginalMovement=false,OriginalControls=false,InvertLookY=false,NoRumble=false,ZTargetOff=false,AimStyleCamera=false,NoIntroMovie=false,AnalogPad=false,FreeCamera=false,LockMarker2=false,NoLockFlick=false,Teleport=true,Widescreen=false; public int RumbleStrength=100,MusicVolume=100,VoiceVolume=100,EffectsVolume=100; public int WindowHeight=720,LookSensitivity=100,CameraDistance=100,FarView=160; public bool CameraWalls=false;   /* experimental camera wall collision (--camera-walls 1), off by default */ }
-public sealed class RuntimeCheck { public bool Ready,KnownBuild,NeedsAcknowledgement,HasPictureOption,HasWindowHeight,HasMovementOption,HasThirdPerson,HasPadMap,HasLookOptions,HasRumble,HasZTarget,HasCameraDistance,HasCameraWalls,HasIntroMovie,HasPadType,HasMultiplayer,HasVolumeSplit,HasTeleport,HasWidescreen,HasFarView,HasFreeCamera,HasFreeCameraDistance,HasLockMarker2,HasLockFlick; public string Problem="",Hash="",Build=""; }
+public sealed class RuntimeSettings { public string Program="",AcceptedHash=""; public int Scale=3,Volume=100; public bool Mute=false,OriginalPicture=false,OriginalMovement=false,OriginalControls=false,InvertLookY=false,NoRumble=false,ZTargetOff=false,AimStyleCamera=false,NoIntroMovie=false,AnalogPad=false,FreeCamera=false,LockMarker2=true,NoLockFlick=false,NoSkateShoot=false,NoSkateLock=false,NoSkateToggle=false,Teleport=true,Widescreen=false; public int RumbleStrength=100,MusicVolume=100,VoiceVolume=100,EffectsVolume=100; public int WindowHeight=720,LookSensitivity=100,CameraDistance=100,FarView=160; public bool CameraWalls=false;   /* experimental camera wall collision (--camera-walls 1), off by default */ }
+public sealed class RuntimeCheck { public bool Ready,KnownBuild,NeedsAcknowledgement,HasPictureOption,HasWindowHeight,HasMovementOption,HasThirdPerson,HasPadMap,HasLookOptions,HasRumble,HasZTarget,HasCameraDistance,HasCameraWalls,HasIntroMovie,HasPadType,HasMultiplayer,HasVolumeSplit,HasTeleport,HasWidescreen,HasFarView,HasFreeCamera,HasFreeCameraDistance,HasLockMarker2,HasLockFlick,HasSkateShoot,HasSkateLock,HasSkateToggle,HasLiveControl; public string Problem="",Hash="",Build=""; }
 // What differs between the two games (the game side's LAUNCHER-CONTRACT-MML2.md, version L2-1). Everything else is the same runtime.
 // GmeImport: only Legends 1 may be given a .gme save; the two games never share a card file, a .gme import or a data folder.
 public sealed class GameKind { public int Id; public string Name="",Folder="",DiscProgram="",GameLine="",ProgramName="",ProgramHint="",KnownHash=""; public bool GmeImport; }
@@ -103,6 +103,7 @@ public static class GameRuntime {
   public static string ImportPath(string data){return Path.Combine(data,"card-import.gme");}
   public static string KeysPath(string data){return Path.Combine(data,"keys.ini");}
   public static string TeleportRequestPath(string data){return Path.Combine(data,"teleport-request.txt");}
+  public static string ControlFilePath(string data){return Path.Combine(data,"live-control.txt");}   // contract 2.34: the command file the overlay writes and the game reads
   public static string TeleportTablePath(string data){return Path.Combine(data,"teleport-table.txt");}
   // The list of teleport places of a kit-built game (builder kit 17 and later). The kit writes teleport-table.txt beside its marker, in the
   // folder two levels above the program (<folder>\build\game\<program>). The game looks for the list in its data folder, beside the request
@@ -147,7 +148,7 @@ public static class GameRuntime {
     var root=doc.DocumentElement;if(root==null||root.Name!="flutterDeckRuntime"||root.GetAttribute("schema")!="1")throw new InvalidDataException("Unsupported game program settings.");
     var game=root.SelectSingleNode("game[@id='"+id.ToString(System.Globalization.CultureInfo.InvariantCulture)+"']") as XmlElement;if(game==null)return s;
     s.Program=game.GetAttribute("program");s.AcceptedHash=game.GetAttribute("acceptedHash").ToUpperInvariant(); // an old "discProgram" attribute is ignored
-    int scale;s.Scale=Int32.TryParse(game.GetAttribute("scale"),out scale)?ClampScale(scale):3;s.Mute=game.GetAttribute("mute")=="1";s.OriginalPicture=game.GetAttribute("originalPicture")=="1";s.OriginalMovement=game.GetAttribute("originalMovement")=="1";s.NoRumble=game.GetAttribute("noRumble")=="1";s.NoIntroMovie=game.GetAttribute("noIntroMovie")=="1";s.Teleport=game.GetAttribute("teleport")!="0";   /* on unless the player switched it off (a saved file without the choice means on) */s.Widescreen=game.GetAttribute("widescreen")=="1";   /* widescreen is the other way round: off unless the file says 1 */int mvol,vvol,evol;s.MusicVolume=Int32.TryParse(game.GetAttribute("musicVolume"),out mvol)?ClampVolume(mvol):100;s.VoiceVolume=Int32.TryParse(game.GetAttribute("voiceVolume"),out vvol)?ClampVolume(vvol):100;s.EffectsVolume=Int32.TryParse(game.GetAttribute("effectsVolume"),out evol)?ClampVolume(evol):100;s.AnalogPad=game.GetAttribute("analogPad")=="1";s.FreeCamera=game.GetAttribute("freeCamera")=="1";s.LockMarker2=game.GetAttribute("lockMarker2")=="1";s.NoLockFlick=game.GetAttribute("noLockFlick")=="1";int rstr;s.RumbleStrength=Int32.TryParse(game.GetAttribute("rumbleStrength"),out rstr)&&rstr>=0&&rstr<=100?rstr:100;s.OriginalControls=game.GetAttribute("originalControls")=="1";s.InvertLookY=game.GetAttribute("invertLookY")=="1";int cdv;s.CameraDistance=Int32.TryParse(game.GetAttribute("cameraDistance"),out cdv)?ClampDistance(cdv):100;int fvv;s.FarView=Int32.TryParse(game.GetAttribute("farView"),out fvv)?ClampFarView(fvv):160;s.CameraWalls=game.GetAttribute("cameraWalls")=="1";s.ZTargetOff=game.GetAttribute("lockOff")=="1";s.AimStyleCamera=false;/* the "older aim" box was removed (the left trigger gives the camera aim); a saved choice is ignored */int ls;s.LookSensitivity=Int32.TryParse(game.GetAttribute("lookSensitivity"),out ls)?ClampLook(ls):100;int wh;if(Int32.TryParse(game.GetAttribute("windowHeight"),out wh))s.WindowHeight=ClampHeight(wh);else s.WindowHeight=HeightFromScale(s.Scale);   // a file from before the presets: the nearest preset to the old whole-number size
+    int scale;s.Scale=Int32.TryParse(game.GetAttribute("scale"),out scale)?ClampScale(scale):3;s.Mute=game.GetAttribute("mute")=="1";s.OriginalPicture=game.GetAttribute("originalPicture")=="1";s.OriginalMovement=game.GetAttribute("originalMovement")=="1";s.NoRumble=game.GetAttribute("noRumble")=="1";s.NoIntroMovie=game.GetAttribute("noIntroMovie")=="1";s.Teleport=game.GetAttribute("teleport")!="0";   /* on unless the player switched it off (a saved file without the choice means on) */s.Widescreen=game.GetAttribute("widescreen")=="1";   /* widescreen is the other way round: off unless the file says 1 */int mvol,vvol,evol;s.MusicVolume=Int32.TryParse(game.GetAttribute("musicVolume"),out mvol)?ClampVolume(mvol):100;s.VoiceVolume=Int32.TryParse(game.GetAttribute("voiceVolume"),out vvol)?ClampVolume(vvol):100;s.EffectsVolume=Int32.TryParse(game.GetAttribute("effectsVolume"),out evol)?ClampVolume(evol):100;s.AnalogPad=game.GetAttribute("analogPad")=="1";s.FreeCamera=game.GetAttribute("freeCamera")=="1";s.LockMarker2=game.HasAttribute("lockMarker")?game.GetAttribute("lockMarker")!="arrow":true;   /* 0.4.1 (owner, 2026-11-22): the Legends 2 marker is on unless the player chose the single arrow. "lockMarker" is new: the old "lockMarker2" was written as "0" even by players who never saw the row, so it does not count as a choice */s.NoLockFlick=game.GetAttribute("noLockFlick")=="1";s.NoSkateShoot=game.GetAttribute("noSkateShoot")=="1";s.NoSkateLock=game.GetAttribute("noSkateLock")=="1";s.NoSkateToggle=game.GetAttribute("noSkateToggle")=="1";int rstr;s.RumbleStrength=Int32.TryParse(game.GetAttribute("rumbleStrength"),out rstr)&&rstr>=0&&rstr<=100?rstr:100;s.OriginalControls=game.GetAttribute("originalControls")=="1";s.InvertLookY=game.GetAttribute("invertLookY")=="1";int cdv;s.CameraDistance=Int32.TryParse(game.GetAttribute("cameraDistance"),out cdv)?ClampDistance(cdv):100;int fvv;s.FarView=Int32.TryParse(game.GetAttribute("farView"),out fvv)?ClampFarView(fvv):160;s.CameraWalls=game.GetAttribute("cameraWalls")=="1";s.ZTargetOff=game.GetAttribute("lockOff")=="1";s.AimStyleCamera=false;/* the "older aim" box was removed (the left trigger gives the camera aim); a saved choice is ignored */int ls;s.LookSensitivity=Int32.TryParse(game.GetAttribute("lookSensitivity"),out ls)?ClampLook(ls):100;int wh;if(Int32.TryParse(game.GetAttribute("windowHeight"),out wh))s.WindowHeight=ClampHeight(wh);else s.WindowHeight=HeightFromScale(s.Scale);   // a file from before the presets: the nearest preset to the old whole-number size
     int volume;s.Volume=Int32.TryParse(game.GetAttribute("volume"),out volume)?ClampVolume(volume):100;
     return s;
   }
@@ -175,7 +176,7 @@ public static class GameRuntime {
     }finally{if(File.Exists(temp))File.Delete(temp);}
   }
   static void WriteGame(XmlWriter writer,string id,RuntimeSettings s){
-      {writer.WriteStartElement("game");writer.WriteAttributeString("id",id);writer.WriteAttributeString("program",s.Program??"");writer.WriteAttributeString("acceptedHash",s.AcceptedHash??"");writer.WriteAttributeString("scale",ClampScale(s.Scale).ToString());writer.WriteAttributeString("mute",s.Mute?"1":"0");writer.WriteAttributeString("originalPicture",s.OriginalPicture?"1":"0");writer.WriteAttributeString("originalMovement",s.OriginalMovement?"1":"0");writer.WriteAttributeString("noRumble",s.NoRumble?"1":"0");writer.WriteAttributeString("noIntroMovie",s.NoIntroMovie?"1":"0");writer.WriteAttributeString("teleport",s.Teleport?"1":"0");writer.WriteAttributeString("widescreen",s.Widescreen?"1":"0");writer.WriteAttributeString("musicVolume",ClampVolume(s.MusicVolume).ToString());writer.WriteAttributeString("voiceVolume",ClampVolume(s.VoiceVolume).ToString());writer.WriteAttributeString("effectsVolume",ClampVolume(s.EffectsVolume).ToString());if(id=="2")writer.WriteAttributeString("analogPad",s.AnalogPad?"1":"0");writer.WriteAttributeString("freeCamera",s.FreeCamera?"1":"0");writer.WriteAttributeString("lockMarker2",s.LockMarker2?"1":"0");writer.WriteAttributeString("noLockFlick",s.NoLockFlick?"1":"0");writer.WriteAttributeString("rumbleStrength",Math.Max(0,Math.Min(100,s.RumbleStrength)).ToString());writer.WriteAttributeString("originalControls",s.OriginalControls?"1":"0");writer.WriteAttributeString("invertLookY",s.InvertLookY?"1":"0");writer.WriteAttributeString("cameraDistance",ClampDistance(s.CameraDistance).ToString());writer.WriteAttributeString("farView",ClampFarView(s.FarView).ToString());writer.WriteAttributeString("cameraWalls",s.CameraWalls?"1":"0");writer.WriteAttributeString("lockOff",s.ZTargetOff?"1":"0");writer.WriteAttributeString("aimCamera",s.AimStyleCamera?"1":"0");writer.WriteAttributeString("lookSensitivity",ClampLook(s.LookSensitivity).ToString());writer.WriteAttributeString("windowHeight",ClampHeight(s.WindowHeight).ToString());writer.WriteAttributeString("volume",ClampVolume(s.Volume).ToString());writer.WriteEndElement();}
+      {writer.WriteStartElement("game");writer.WriteAttributeString("id",id);writer.WriteAttributeString("program",s.Program??"");writer.WriteAttributeString("acceptedHash",s.AcceptedHash??"");writer.WriteAttributeString("scale",ClampScale(s.Scale).ToString());writer.WriteAttributeString("mute",s.Mute?"1":"0");writer.WriteAttributeString("originalPicture",s.OriginalPicture?"1":"0");writer.WriteAttributeString("originalMovement",s.OriginalMovement?"1":"0");writer.WriteAttributeString("noRumble",s.NoRumble?"1":"0");writer.WriteAttributeString("noIntroMovie",s.NoIntroMovie?"1":"0");writer.WriteAttributeString("teleport",s.Teleport?"1":"0");writer.WriteAttributeString("widescreen",s.Widescreen?"1":"0");writer.WriteAttributeString("musicVolume",ClampVolume(s.MusicVolume).ToString());writer.WriteAttributeString("voiceVolume",ClampVolume(s.VoiceVolume).ToString());writer.WriteAttributeString("effectsVolume",ClampVolume(s.EffectsVolume).ToString());if(id=="2")writer.WriteAttributeString("analogPad",s.AnalogPad?"1":"0");writer.WriteAttributeString("freeCamera",s.FreeCamera?"1":"0");writer.WriteAttributeString("lockMarker",s.LockMarker2?"ring":"arrow");writer.WriteAttributeString("lockMarker2",s.LockMarker2?"1":"0");   /* lockMarker2 still written for an older launcher */writer.WriteAttributeString("noLockFlick",s.NoLockFlick?"1":"0");writer.WriteAttributeString("noSkateShoot",s.NoSkateShoot?"1":"0");writer.WriteAttributeString("noSkateLock",s.NoSkateLock?"1":"0");writer.WriteAttributeString("noSkateToggle",s.NoSkateToggle?"1":"0");writer.WriteAttributeString("rumbleStrength",Math.Max(0,Math.Min(100,s.RumbleStrength)).ToString());writer.WriteAttributeString("originalControls",s.OriginalControls?"1":"0");writer.WriteAttributeString("invertLookY",s.InvertLookY?"1":"0");writer.WriteAttributeString("cameraDistance",ClampDistance(s.CameraDistance).ToString());writer.WriteAttributeString("farView",ClampFarView(s.FarView).ToString());writer.WriteAttributeString("cameraWalls",s.CameraWalls?"1":"0");writer.WriteAttributeString("lockOff",s.ZTargetOff?"1":"0");writer.WriteAttributeString("aimCamera",s.AimStyleCamera?"1":"0");writer.WriteAttributeString("lookSensitivity",ClampLook(s.LookSensitivity).ToString());writer.WriteAttributeString("windowHeight",ClampHeight(s.WindowHeight).ToString());writer.WriteAttributeString("volume",ClampVolume(s.Volume).ToString());writer.WriteEndElement();}
   }
 
   // ---- checks ----
@@ -324,7 +325,7 @@ public static class GameRuntime {
     r.Problem=CheckIdentity(identity,kind.Id>=2?kind.ProgramHint:null);if(r.Problem.Length>0)return r;
     r.Problem=CheckSlot(kind,identity);if(r.Problem.Length>0)return r;
     string contract,built;identity.TryGetValue("contract",out contract);identity.TryGetValue("build",out built);r.Build="contract "+contract+(String.IsNullOrEmpty(built)?"":", built "+built);string feat;identity.TryGetValue("features",out feat);r.HasPictureOption=new HashSet<string>((feat??"").Split(','),StringComparer.OrdinalIgnoreCase).Contains("first-boot-picture");r.HasWindowHeight=new HashSet<string>((feat??"").Split(','),StringComparer.OrdinalIgnoreCase).Contains("window-height");r.HasMovementOption=new HashSet<string>((feat??"").Split(','),StringComparer.OrdinalIgnoreCase).Contains("movement");r.HasRumble=new HashSet<string>((feat??"").Split(','),StringComparer.OrdinalIgnoreCase).Contains("rumble");   // contract 2.9: --no-rumble works in this build   // contract 2.7: --movement modern|original
-    {var fs=new HashSet<string>((feat??"").Split(','),StringComparer.OrdinalIgnoreCase);r.HasThirdPerson=fs.Contains("thirdperson");r.HasPadMap=fs.Contains("pad-map");r.HasLookOptions=fs.Contains("look-options");r.HasZTarget=fs.Contains("lockon")&&fs.Contains("aim-style");r.HasCameraDistance=fs.Contains("camera-distance");r.HasFarView=fs.Contains("far-view");r.HasCameraWalls=fs.Contains("camera-walls");r.HasIntroMovie=fs.Contains("intro-movie");r.HasVolumeSplit=fs.Contains("volume-split");r.HasTeleport=kind.Id==1&&fs.Contains("teleport");r.HasWidescreen=kind.Id==1&&fs.Contains("widescreen");r.HasPadType=fs.Contains("pad-type");r.HasLockMarker2=kind.Id==1&&fs.Contains("lock-marker-2");r.HasLockFlick=kind.Id==1&&fs.Contains("lock-flick");r.HasFreeCamera=kind.Id==2&&fs.Contains("free-camera");r.HasFreeCameraDistance=kind.Id==2&&fs.Contains("free-camera")&&fs.Contains("free-camera-distance");r.HasMultiplayer=kind.Id==1&&fs.Contains("multiplayer");}   // contract 2.8
+    {var fs=new HashSet<string>((feat??"").Split(','),StringComparer.OrdinalIgnoreCase);r.HasThirdPerson=fs.Contains("thirdperson");r.HasPadMap=fs.Contains("pad-map");r.HasLookOptions=fs.Contains("look-options");r.HasZTarget=fs.Contains("lockon")&&fs.Contains("aim-style");r.HasCameraDistance=fs.Contains("camera-distance");r.HasFarView=fs.Contains("far-view");r.HasCameraWalls=fs.Contains("camera-walls");r.HasIntroMovie=fs.Contains("intro-movie");r.HasVolumeSplit=fs.Contains("volume-split");r.HasTeleport=kind.Id==1&&fs.Contains("teleport");r.HasWidescreen=kind.Id==1&&fs.Contains("widescreen");r.HasPadType=fs.Contains("pad-type");r.HasLockMarker2=kind.Id==1&&fs.Contains("lock-marker-2");r.HasLockFlick=kind.Id==1&&fs.Contains("lock-flick");r.HasSkateShoot=kind.Id==1&&fs.Contains("skate-shoot");r.HasSkateLock=kind.Id==1&&fs.Contains("skate-lock");r.HasSkateToggle=kind.Id==1&&fs.Contains("skate-toggle");r.HasFreeCamera=kind.Id==2&&fs.Contains("free-camera");r.HasFreeCameraDistance=kind.Id==2&&fs.Contains("free-camera")&&fs.Contains("free-camera-distance");r.HasMultiplayer=kind.Id==1&&fs.Contains("multiplayer");r.HasLiveControl=kind.Id==1&&fs.Contains("live-control");}   // contract 2.8
     r.Ready=true;return r;
   }
 
@@ -401,7 +402,7 @@ public static class GameRuntime {
   // The game reads its program from the disc image and is always given the launcher's card file. If that file does
   // not exist yet the game makes it: from a .gme the user copied in, or else as an empty card (--card-new never
   // touches a card that exists, and the two options may not be combined).
-  public static string BuildArguments(RuntimeSettings s,string cue,string data,bool pictureOption=false,bool windowHeight=false,bool movementOption=false,bool thirdPersonOption=false,bool padMapOption=false,bool lookOptions=false,bool rumbleOption=false,bool zTargetOption=false,GameKind kind=null,bool introMovieOption=false,bool padTypeOption=false,bool cameraDistanceOption=false,bool volumeSplitOption=false,bool teleportOption=false,bool widescreenOption=false,bool cameraWallsOption=false,bool farViewOption=false,bool freeCameraOption=false,bool freeCameraDistanceOption=false,bool lockMarker2Option=false,bool lockFlickOption=false){
+  public static string BuildArguments(RuntimeSettings s,string cue,string data,bool pictureOption=false,bool windowHeight=false,bool movementOption=false,bool thirdPersonOption=false,bool padMapOption=false,bool lookOptions=false,bool rumbleOption=false,bool zTargetOption=false,GameKind kind=null,bool introMovieOption=false,bool padTypeOption=false,bool cameraDistanceOption=false,bool volumeSplitOption=false,bool teleportOption=false,bool widescreenOption=false,bool cameraWallsOption=false,bool farViewOption=false,bool freeCameraOption=false,bool freeCameraDistanceOption=false,bool lockMarker2Option=false,bool lockFlickOption=false,bool skateShootOption=false,bool skateLockOption=false,bool skateToggleOption=false,bool liveControlOption=false){
     var a=new StringBuilder("--live");kind=kind??Legends1;
     a.Append(" --exe-from-disc ").Append(kind.DiscProgram).Append(" --run-dir ").Append(Quote(SessionsPath(data))).Append(" --cue ").Append(Quote(cue)).Append(" --card0 ").Append(Quote(CardPath(data)));
     if(kind.GmeImport&&!File.Exists(CardPath(data))&&HasImport(data))a.Append(" --card-from-gme ").Append(Quote(ImportPath(data)));else a.Append(" --card-new");
@@ -424,7 +425,13 @@ public static class GameRuntime {
     if(padTypeOption&&kind.Id==2&&s.AnalogPad)a.Append(" --pad-type analog");   // contract L2-2, Legends 2 only: digital is the program's default, so only the analog choice is passed, and only to a program that reports 'pad-type'
     if(freeCameraOption&&kind!=null&&kind.Id==2&&s.FreeCamera)a.Append(" --mv2-free --mv2-look-speed ").Append(ClampLook(s.LookSensitivity)).Append(" --mv2-look-invert ").Append(s.InvertLookY?"1":"0");if(freeCameraDistanceOption)a.Append(" --mv2-camera-distance ").Append(ClampDistance(s.CameraDistance));   // contract L2-4, Legends 2 only: off unless the player ticked it; only for a program that reports 'free-camera'; the program then asks for the analog pad itself
     if(lockMarker2Option&&s.LockMarker2&&(kind==null||kind.Id==1))a.Append(" --lock-marker 2");   // contract 2.29 (L16), Legends 1 only: the Legends 2 look of the lock-on marker; off unless ticked; the program's own default (the single arrow) stays otherwise; only for a program that reports 'lock-marker-2'
-    if(lockFlickOption&&kind==null||lockFlickOption&&kind.Id==1){if(s.NoLockFlick)a.Append(" --lock-flick 0");}   // contract 2.30 (L17), Legends 1 only: a flick of the right stick while locked switches to the next target; on by default in a program that reports 'lock-flick', so only the off choice is passed
+    if(lockFlickOption&&kind==null||lockFlickOption&&kind.Id==1){if(s.NoLockFlick)a.Append(" --lock-flick 0");}
+    if(kind==null||kind.Id==1){   // contracts 2.31 to 2.33 (developer, 2026-11-22), Legends 1 only: on by default in a program that reports the word, so only the off choice is passed
+      if(skateShootOption&&s.NoSkateShoot)a.Append(" --skate-shoot 0");
+      if(skateLockOption&&s.NoSkateLock)a.Append(" --skate-lock 0");
+      if(skateToggleOption&&s.NoSkateToggle)a.Append(" --skate-toggle 0");
+    }   // contract 2.30 (L17), Legends 1 only: a flick of the right stick while locked switches to the next target; on by default in a program that reports 'lock-flick', so only the off choice is passed
+    if(liveControlOption&&kind.Id==1)a.Append(" --control-file ").Append(Quote(ControlFilePath(data)));   // contract 2.34: only for a program that reports 'live-control' (Legends 1); the overlay then offers Pause, Fullscreen, Screenshot, volume and mute
     if(introMovieOption&&s.NoIntroMovie)a.Append(" --no-intro-movie");   // contract 2.12: the opening movie plays by default in a play session of a program that reports 'intro-movie', so only the off choice is passed
     return a.ToString();
   }
@@ -464,14 +471,14 @@ public static class GameRuntime {
     if(otherData!=null)foreach(string other in otherData)if(CardInUse(other))throw new InvalidOperationException("Another game is running. Close it before starting this one.");   // one game at a time across all of them
     if(multiplayer!=null&&!check.HasMultiplayer)throw new InvalidOperationException("This game program has no multiplayer. Nothing was started.");
     // An earlier refusal's fail file is removed first: the game only writes it on exit 2 and never clears it.
-    try{Directory.CreateDirectory(SessionsPath(data));EnsureKeys(data);if(kind.Id==1)EnsurePadMap(data);if(File.Exists(FailFilePath(data)))File.Delete(FailFilePath(data));if(File.Exists(TeleportRequestPath(data)))File.Delete(TeleportRequestPath(data));}   // an old teleport request must not meet the new game
+    try{Directory.CreateDirectory(SessionsPath(data));EnsureKeys(data);if(kind.Id==1)EnsurePadMap(data);if(File.Exists(FailFilePath(data)))File.Delete(FailFilePath(data));if(File.Exists(TeleportRequestPath(data)))File.Delete(TeleportRequestPath(data));LiveControl.Reset(ControlFilePath(data));foreach(string stale in new[]{ControlFilePath(data),ControlFilePath(data)+".taken",ControlFilePath(data)+".tmp",ControlFilePath(data)+".state",ControlFilePath(data)+".state.tmp"})if(File.Exists(stale))File.Delete(stale);}   // an old teleport request must not meet the new game
     catch(Exception){throw new InvalidOperationException("Flutter Deck could not prepare its folder for this game (session folder or key map). Nothing was started.");}
     if(kind.Id==1)TakeBuiltTeleportList(s.Program,data);   // a kit-built game brings its list of teleport places; a player who has a list keeps it
     // Mark the card before the game exists, naming this launcher. If the card cannot be marked, nothing is started:
     // an unmarked running game is exactly what could let a second one share the card.
     var self=Process.GetCurrentProcess();
     try{WriteLock(data,self);}catch(Exception){throw new InvalidOperationException("Flutter Deck could not mark the memory card as in use, so the game was not started. Check the session.lock entry in its game folder.");}
-    var session=new GameSession{SessionsFolder=SessionsPath(data),Arguments=BuildArguments(s,cue,data,check.HasPictureOption,check.HasWindowHeight,check.HasMovementOption,check.HasThirdPerson,check.HasPadMap,check.HasLookOptions,check.HasRumble,check.HasZTarget,kind,check.HasIntroMovie,check.HasPadType,check.HasCameraDistance,check.HasVolumeSplit,check.HasTeleport,check.HasWidescreen,check.HasCameraWalls,check.HasFarView,check.HasFreeCamera,check.HasFreeCameraDistance,check.HasLockMarker2,check.HasLockFlick),StartedUtc=DateTime.UtcNow};
+    var session=new GameSession{SessionsFolder=SessionsPath(data),Arguments=BuildArguments(s,cue,data,check.HasPictureOption,check.HasWindowHeight,check.HasMovementOption,check.HasThirdPerson,check.HasPadMap,check.HasLookOptions,check.HasRumble,check.HasZTarget,kind,check.HasIntroMovie,check.HasPadType,check.HasCameraDistance,check.HasVolumeSplit,check.HasTeleport,check.HasWidescreen,check.HasCameraWalls,check.HasFarView,check.HasFreeCamera,check.HasFreeCameraDistance,check.HasLockMarker2,check.HasLockFlick,check.HasSkateShoot,check.HasSkateLock,check.HasSkateToggle,check.HasLiveControl),StartedUtc=DateTime.UtcNow};
     var info=new ProcessStartInfo(s.Program,session.Arguments){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true,WorkingDirectory=Path.GetDirectoryName(s.Program)};
     // An ordinary game never gets a multiplayer setting, also not one that this launcher itself was started with.
     info.EnvironmentVariables.Remove("RMX_MP");info.EnvironmentVariables.Remove("RMX_MP_STATUS");
@@ -516,5 +523,108 @@ public static class GameRuntime {
       return trap.Length>0?"The game stopped (exit code 3).\n"+trap+"\nSession log: "+log:"The game stopped (exit code 3) and gave no reason."+(log==null?"":"\nSession log: "+log);}
     string end=log==null?"":FindLine(log,"RUN END:");
     return "The game ended unexpectedly (exit code "+code+")."+(end.Length>0?"\n"+end:"")+(log==null?"":"\nSession log: "+log);
+  }
+}
+
+// Live control of the game (contract 2.34, 2026-11-23). The launcher writes one small command file and the game reads it: it renames the file
+// to <path>.taken, reads it and deletes it, and reads at most 32 lines and under 1024 bytes per file. So a file is never rewritten: commands wait
+// in memory, and the next file is written (as a temp file, then renamed) only when the last one is gone. Rewriting a file the game might be
+// taking would run its commands twice. A newer "volume", "pause", "mute" or "speed" line replaces an older one that still waits.
+// What the game reports in <control path>.state: paused 0|1, volume 0-100, mute 0|1, fullscreen 0|1, last_screenshot <full path>, unlimited_speed 0|1.
+public sealed class LiveState { public bool Paused,Mute,Fullscreen,Unlimited;public int Volume=100;public string LastShot=""; }
+public static class LiveControl {
+  const int MaxLines=30,MaxBytes=900,MaxWaiting=200;
+  static readonly object gate=new object();
+  static readonly System.Collections.Generic.Dictionary<string,System.Collections.Generic.List<string>> waiting=new System.Collections.Generic.Dictionary<string,System.Collections.Generic.List<string>>();
+  static System.Threading.Timer timer;
+  public static bool Valid(string line){
+    if(line==null)return false;line=line.Trim();if(line.Length==0||line.Length>40)return false;
+    foreach(char ch in line)if(ch<' '||ch>'~')return false;
+    return true;
+  }
+  static string Family(string line){
+    int sp=line.IndexOf(' ');string w=(sp<0?line:line.Substring(0,sp)).ToLowerInvariant();
+    return w=="volume"||w=="pause"||w=="mute"||w=="speed"?w:null;
+  }
+  // Pure: adds a line to the lines that wait.
+  public static void Add(System.Collections.Generic.List<string> q,string line){
+    line=line.Trim();string f=Family(line);
+    if(f!=null)q.RemoveAll(delegate(string l){return Family(l)==f;});
+    q.Add(line);
+  }
+  // Pure: the text of the next file (the oldest lines, at most 30 lines and 900 bytes) and how many lines it holds. Nothing is removed.
+  public static string FileText(System.Collections.Generic.List<string> q,out int count){
+    var take=new System.Collections.Generic.List<string>();int bytes=0;
+    foreach(string l in q){
+      int b=Encoding.ASCII.GetByteCount(l)+1;
+      if(take.Count>=MaxLines||(take.Count>0&&bytes+b>MaxBytes))break;
+      take.Add(l);bytes+=b;
+    }
+    count=take.Count;
+    return take.Count==0?"":String.Join("\n",take.ToArray())+"\n";
+  }
+  // Hands one command line over. The line is written now when the game has taken the last file, else it waits and a timer writes it later.
+  public static bool Send(string path,string line){
+    if(String.IsNullOrEmpty(path)||!Valid(line))return false;
+    lock(gate){
+      System.Collections.Generic.List<string> q;if(!waiting.TryGetValue(path,out q)){q=new System.Collections.Generic.List<string>();waiting[path]=q;}
+      if(Family(line.Trim())==null&&q.Count>=MaxWaiting)return false;   // too many waiting: the caller is told, nothing is dropped quietly
+      Add(q,line);Flush(path,q);
+      if(q.Count>0&&timer==null)timer=new System.Threading.Timer(Tick,null,40,40);
+    }
+    return true;
+  }
+  // A new game: nothing from an earlier game may still wait.
+  public static void Reset(string path){lock(gate){if(path!=null)waiting.Remove(path);}}
+  static void Tick(object state){
+    lock(gate){
+      bool left=false;
+      foreach(string path in new System.Collections.Generic.List<string>(waiting.Keys)){
+        var q=waiting[path];Flush(path,q);
+        if(q.Count>0)left=true;else waiting.Remove(path);
+      }
+      if(!left&&timer!=null){timer.Dispose();timer=null;}
+    }
+  }
+  // Only when the path is gone: then the rename cannot replace lines the game has not read. A failure leaves the lines waiting.
+  static void Flush(string path,System.Collections.Generic.List<string> q){
+    if(q.Count==0)return;
+    string tmp=path+".tmp";
+    try{
+      if(File.Exists(path))return;
+      int n;string text=FileText(q,out n);if(n==0)return;
+      File.WriteAllText(tmp,text,Encoding.ASCII);
+      File.Move(tmp,path);
+      q.RemoveRange(0,n);
+    }catch(Exception){try{if(File.Exists(tmp))File.Delete(tmp);}catch(Exception){}}
+  }
+  public static string StatePath(string controlPath){return controlPath+".state";}
+  // Pure: null when the text is empty or does not hold the paused and volume lines (a damaged or half-written file).
+  public static LiveState ParseState(string text){
+    if(String.IsNullOrEmpty(text))return null;
+    var s=new LiveState();bool sawPaused=false,sawVolume=false;
+    foreach(string raw in text.Replace("\r","").Split('\n')){
+      string l=raw.Trim();if(l.Length==0)continue;
+      int sp=l.IndexOf(' ');string k=sp<0?l:l.Substring(0,sp),v=sp<0?"":l.Substring(sp+1).Trim();
+      switch(k){
+        case "paused":s.Paused=v=="1";sawPaused=true;break;
+        case "volume":int n;if(Int32.TryParse(v,out n)){s.Volume=Math.Max(0,Math.Min(100,n));sawVolume=true;}break;
+        case "mute":s.Mute=v=="1";break;
+        case "fullscreen":s.Fullscreen=v=="1";break;
+        case "unlimited_speed":s.Unlimited=v=="1";break;
+        case "last_screenshot":s.LastShot=v;break;
+      }
+    }
+    return sawPaused&&sawVolume?s:null;
+  }
+  // The game writes the state file as a temp file and renames it. Read it with sharing allowed and once more if the first read fails.
+  public static LiveState ReadState(string controlPath){
+    for(int attempt=0;attempt<2;attempt++){
+      try{
+        string p=StatePath(controlPath);if(!File.Exists(p))return null;
+        using(var fs=new FileStream(p,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete))using(var r=new StreamReader(fs,Encoding.UTF8))return ParseState(r.ReadToEnd());
+      }catch(IOException){System.Threading.Thread.Sleep(10);}catch(UnauthorizedAccessException){System.Threading.Thread.Sleep(10);}
+    }
+    return null;
   }
 }

@@ -23,7 +23,7 @@ public static class OverlayGameSettings {
 
   // A copy that later changes cannot touch: taken when the game starts, to tell what the running game was given.
   public static RuntimeSettings Copy(RuntimeSettings s){
-    return new RuntimeSettings{Program=s.Program,AcceptedHash=s.AcceptedHash,Scale=s.Scale,Volume=s.Volume,Mute=s.Mute,OriginalPicture=s.OriginalPicture,OriginalMovement=s.OriginalMovement,OriginalControls=s.OriginalControls,InvertLookY=s.InvertLookY,FreeCamera=s.FreeCamera,LockMarker2=s.LockMarker2,NoLockFlick=s.NoLockFlick,CameraDistance=s.CameraDistance,NoRumble=s.NoRumble,ZTargetOff=s.ZTargetOff,AimStyleCamera=s.AimStyleCamera,NoIntroMovie=s.NoIntroMovie,RumbleStrength=s.RumbleStrength,WindowHeight=s.WindowHeight,LookSensitivity=s.LookSensitivity};
+    return new RuntimeSettings{Program=s.Program,AcceptedHash=s.AcceptedHash,Scale=s.Scale,Volume=s.Volume,Mute=s.Mute,OriginalPicture=s.OriginalPicture,OriginalMovement=s.OriginalMovement,OriginalControls=s.OriginalControls,InvertLookY=s.InvertLookY,FreeCamera=s.FreeCamera,LockMarker2=s.LockMarker2,NoLockFlick=s.NoLockFlick,NoSkateShoot=s.NoSkateShoot,NoSkateLock=s.NoSkateLock,NoSkateToggle=s.NoSkateToggle,CameraDistance=s.CameraDistance,NoRumble=s.NoRumble,ZTargetOff=s.ZTargetOff,AimStyleCamera=s.AimStyleCamera,NoIntroMovie=s.NoIntroMovie,RumbleStrength=s.RumbleStrength,WindowHeight=s.WindowHeight,LookSensitivity=s.LookSensitivity};
   }
 
   static int Nearest(int[] steps,int value){int best=0;for(int i=1;i<steps.Length;i++)if(Math.Abs(steps[i]-value)<Math.Abs(steps[best]-value))best=i;return best;}
@@ -85,6 +85,10 @@ public static class OverlayGameSettings {
       if(c.HasLockFlick)l.Add(Sw("lock-flick","Flick to switch target",!s.NoLockFlick,thirdPerson&&c.HasZTarget&&!s.ZTargetOff,"Needs third-person controls and the target lock-on"));   // contract 2.30 (L17)
       if(c.HasLockMarker2)l.Add(Sw("lock-marker-style","Legends 2 lock-on marker",s.LockMarker2,thirdPerson&&c.HasZTarget&&!s.ZTargetOff,"Needs third-person controls and the target lock-on"));   // contract 2.29 (L16)
     }
+    // The Jet Skates of Legends 1 (contracts 2.31 to 2.33): all on by default
+    if(c.HasSkateShoot)l.Add(Sw("skate-shoot","Shoot on the Jet Skates",!s.NoSkateShoot,true,""));
+    if(c.HasSkateLock)l.Add(Sw("skate-lock","Lock on while skating",!s.NoSkateLock,thirdPerson&&c.HasZTarget&&!s.ZTargetOff,"Needs third-person controls and the target lock-on"));
+    if(c.HasSkateToggle)l.Add(Sw("skate-toggle","Hold Circle to start skates, press Circle to stop",!s.NoSkateToggle,c.HasMovementOption&&(thirdPerson||!s.OriginalMovement),"Needs smooth movement"));
     return l;
   }
 
@@ -110,6 +114,9 @@ public static class OverlayGameSettings {
       case "lock-on":s.ZTargetOff=!on;break;
       case "lock-marker-style":s.LockMarker2=on;break;
       case "lock-flick":s.NoLockFlick=!on;break;
+      case "skate-shoot":s.NoSkateShoot=!on;break;
+      case "skate-lock":s.NoSkateLock=!on;break;
+      case "skate-toggle":s.NoSkateToggle=!on;break;
       default:return "This game program does not offer that setting.";
     }
     return "";
@@ -120,8 +127,8 @@ public static class OverlayGameSettings {
   public static bool Differs(RuntimeSettings running,RuntimeSettings now,RuntimeCheck c,GameKind kind,string cue,string data){
     try{
       if(running==null||now==null||c==null)return false;
-      return GameRuntime.BuildArguments(running,cue,data,c.HasPictureOption,c.HasWindowHeight,c.HasMovementOption,c.HasThirdPerson,c.HasPadMap,c.HasLookOptions,c.HasRumble,c.HasZTarget,kind,c.HasIntroMovie,freeCameraOption:c.HasFreeCamera,freeCameraDistanceOption:c.HasFreeCameraDistance,lockMarker2Option:c.HasLockMarker2,lockFlickOption:c.HasLockFlick)
-        !=GameRuntime.BuildArguments(now,cue,data,c.HasPictureOption,c.HasWindowHeight,c.HasMovementOption,c.HasThirdPerson,c.HasPadMap,c.HasLookOptions,c.HasRumble,c.HasZTarget,kind,c.HasIntroMovie,freeCameraOption:c.HasFreeCamera,freeCameraDistanceOption:c.HasFreeCameraDistance,lockMarker2Option:c.HasLockMarker2,lockFlickOption:c.HasLockFlick);
+      return GameRuntime.BuildArguments(running,cue,data,c.HasPictureOption,c.HasWindowHeight,c.HasMovementOption,c.HasThirdPerson,c.HasPadMap,c.HasLookOptions,c.HasRumble,c.HasZTarget,kind,c.HasIntroMovie,freeCameraOption:c.HasFreeCamera,freeCameraDistanceOption:c.HasFreeCameraDistance,lockMarker2Option:c.HasLockMarker2,lockFlickOption:c.HasLockFlick,skateShootOption:c.HasSkateShoot,skateLockOption:c.HasSkateLock,skateToggleOption:c.HasSkateToggle)
+        !=GameRuntime.BuildArguments(now,cue,data,c.HasPictureOption,c.HasWindowHeight,c.HasMovementOption,c.HasThirdPerson,c.HasPadMap,c.HasLookOptions,c.HasRumble,c.HasZTarget,kind,c.HasIntroMovie,freeCameraOption:c.HasFreeCamera,freeCameraDistanceOption:c.HasFreeCameraDistance,lockMarker2Option:c.HasLockMarker2,lockFlickOption:c.HasLockFlick,skateShootOption:c.HasSkateShoot,skateLockOption:c.HasSkateLock,skateToggleOption:c.HasSkateToggle);
     }catch(Exception){return false;}
   }
 }

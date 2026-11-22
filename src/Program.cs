@@ -161,7 +161,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     itemStyle.Setters.Add(new Setter(System.Windows.Controls.Control.ForegroundProperty,Ink("#F5EAD0")));itemStyle.Setters.Add(new Setter(FrameworkElement.FocusVisualStyleProperty,null));itemStyle.Setters.Add(new Setter(System.Windows.Controls.Control.TemplateProperty,(ControlTemplate)System.Windows.Markup.XamlReader.Parse(@"<ControlTemplate TargetType='ComboBoxItem' xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'><Border x:Name='Bd' Background='Transparent' BorderBrush='Transparent' BorderThickness='3,0,0,0' Padding='{TemplateBinding Padding}' SnapsToDevicePixels='True'><ContentPresenter VerticalAlignment='Center'/></Border><ControlTemplate.Triggers><Trigger Property='IsSelected' Value='True'><Setter TargetName='Bd' Property='Background' Value='#163B54'/><Setter TargetName='Bd' Property='BorderBrush' Value='#5ECDEB'/></Trigger><Trigger Property='IsHighlighted' Value='True'><Setter TargetName='Bd' Property='Background' Value='#41637D'/></Trigger></ControlTemplate.Triggers></ControlTemplate>")));
     Resources.Add(typeof(ComboBoxItem),itemStyle);
     Deactivated+=delegate{if(keyCapture!=null){keyCapture=null;keyNote="No change.";Render();}};PreviewMouseDown+=delegate(object sender,MouseButtonEventArgs e){if(e.ChangedButton==MouseButton.XButton1){GoBack();e.Handled=true;}else if(e.ChangedButton==MouseButton.XButton2){GoForward();e.Handled=true;}};PreviewKeyDown+=delegate(object sender,KeyEventArgs e){if(keyCapture!=null){CaptureKey(e);return;}if((e.Key==Key.System&&Keyboard.Modifiers==ModifierKeys.Alt&&(e.SystemKey==Key.Left||e.SystemKey==Key.Right))||e.Key==Key.BrowserBack||e.Key==Key.BrowserForward){if(e.SystemKey==Key.Left||e.Key==Key.BrowserBack)GoBack();else GoForward();e.Handled=true;return;}if(e.Key==Key.Escape && screen!="Library"){if(OpenDropDown(e.OriginalSource)!=null)return;Navigate("Library");nav[2].Focus();e.Handled=true;}};
-    Title="Flutter Deck | 0.4.0 Beta";System.Windows.Automation.AutomationProperties.SetAutomationId(this,"FlutterDeck");var prefs=LauncherPreferences.Load(LauncherPreferences.PathName);Width=prefs.Width;Height=Width*941.0/1672.0;Topmost=prefs.Topmost;game=GameRuntime.IsGame(prefs.Game)?prefs.Game:1;Closing+=delegate{FlushChoices();audio.Dispose();StopScaling();SaveWindowPreferences();StopOverlay();};MinWidth=1200;MinHeight=675;WindowStartupLocation=WindowStartupLocation.CenterScreen;
+    Title="Flutter Deck | 0.4.1 Beta";System.Windows.Automation.AutomationProperties.SetAutomationId(this,"FlutterDeck");var prefs=LauncherPreferences.Load(LauncherPreferences.PathName);Width=prefs.Width;Height=Width*941.0/1672.0;Topmost=prefs.Topmost;game=GameRuntime.IsGame(prefs.Game)?prefs.Game:1;Closing+=delegate{FlushChoices();audio.Dispose();StopScaling();SaveWindowPreferences();StopOverlay();};MinWidth=1200;MinHeight=675;WindowStartupLocation=WindowStartupLocation.CenterScreen;
     WindowStyle=WindowStyle.None;AllowsTransparency=true;Background=Brushes.Transparent;ResizeMode=ResizeMode.CanMinimize;
     var art=new BitmapImage();using(var s=Assembly.GetExecutingAssembly().GetManifestResourceStream("Ship")){art.BeginInit();art.CacheOption=BitmapCacheOption.OnLoad;art.StreamSource=s;art.EndInit();art.Freeze();}shipArt=art;
     var artwork=new Image{Source=art,Stretch=Stretch.Fill,IsHitTestVisible=false};RenderOptions.SetBitmapScalingMode(artwork,BitmapScalingMode.LowQuality);Place(artwork,0,0,1672,941);
@@ -259,7 +259,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
   }
   string newsEndpoint="",newsFolder="",newsState="Bundled notes; publisher not configured.";bool newsBusy=false,newsClosed=false;NewsPhase newsPhase=NewsPhase.Unconfigured;int newsUnread=0;string publishedState="";List<NewsItem> newsItems=new List<NewsItem>();HashSet<string> newsRead=new HashSet<string>();
   void InitializeNews(){
-    try{string config=System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"publisher-feed.txt");if(System.IO.File.Exists(config)){if(new System.IO.FileInfo(config).Length>2048)throw new Exception();newsEndpoint=System.IO.File.ReadAllText(config).Trim();}if(newsEndpoint.Length>0)newsEndpoint=NewsFeed.Endpoint(newsEndpoint).AbsoluteUri;newsFolder=NewsFeed.Folder(newsEndpoint);string xml=null;try{xml=NewsFeed.LoadCache(newsFolder);if(xml!=null)newsState="Cached notices; not yet refreshed this session.";}catch{newsState="Cached notices could not be read; using bundled notes.";}if(xml==null){using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("News"))xml=NewsFeed.ReadBounded(stream);}newsItems=NewsFeed.Parse(xml);try{newsRead=NewsFeed.LoadRead(newsFolder);}catch{newsState+=" Read markers unavailable; notices shown unread.";}newsPhase=newsEndpoint.Length>0?NewsPhase.Idle:NewsPhase.Unconfigured;}
+    try{string config=System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"publisher-feed.txt");if(System.IO.File.Exists(config)){if(new System.IO.FileInfo(config).Length>2048)throw new Exception();newsEndpoint=System.IO.File.ReadAllText(config).Trim();}newsEndpoint=NewsFeed.Endpoint(NewsFeed.Choose(newsEndpoint)).AbsoluteUri;newsFolder=NewsFeed.Folder(newsEndpoint);string xml=null;try{xml=NewsFeed.LoadCache(newsFolder);if(xml!=null)newsState="Cached notices; not yet refreshed this session.";}catch{newsState="Cached notices could not be read; using bundled notes.";}if(xml==null){using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("News"))xml=NewsFeed.ReadBounded(stream);if(newsState.StartsWith("Bundled notes; publisher"))newsState="Bundled notes; not yet refreshed this session.";}newsItems=NewsFeed.Parse(xml);try{newsRead=NewsFeed.LoadRead(newsFolder);}catch{newsState+=" Read markers unavailable; notices shown unread.";}newsPhase=newsEndpoint.Length>0?NewsPhase.Idle:NewsPhase.Unconfigured;}
     catch{newsEndpoint="";newsPhase=NewsPhase.ConfigError;newsState="News configuration unavailable. Publisher setup needs attention.";}
     var timer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMinutes(15)};timer.Tick+=delegate{RefreshNews();};timer.Start();Closed+=delegate{newsClosed=true;timer.Stop();};Loaded+=delegate{RefreshNews();};
   }
@@ -582,6 +582,9 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
   void InitializeRuntime(){try{for(int id=1;id<=GameRuntime.GameCount;id++)runtimes[id-1]=GameRuntime.Load(GameRuntime.SettingsPath,id);}catch{runtimeLoadFailed=true;}for(int id=1;id<=GameRuntime.GameCount;id++)GameRuntime.ReleaseLock(GameRuntime.DataFolderFor(id));}
   void SaveRuntime(){try{GameRuntime.Save(GameRuntime.SettingsPath,runtime,game);}catch{playNote="That choice could not be saved, so it applies to this session only.";sessionLog.Add("preferences-save-failed");}}
   string KeyData {get{return GameRuntime.DataFolderFor(OwnGameRunning?sessionGame:game);}} // the overlay's key editor always edits the running game's keys
+  // The gamepad map is a Mega Man Legends file (contract 2.8); the other two games' programs have no --pad-map yet.
+  PadMap padDraft;bool padDirty=false,padLoadFailed=false;string padNote="",padDraftFor;
+  string PadData {get{return GameRuntime.DataFolderFor(1);}}
   bool OwnGameRunning {get{try{return gameSession!=null&&!gameSession.Process.HasExited;}catch{return false;}}}
   // Also true for a game started by an earlier or second Flutter Deck: the memory card is in use either way.
   bool GameRunning {get{return RunningGame!=0;}}
@@ -662,13 +665,16 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
       var gameSource=OverlayGameSettings.ForSession(runtimes[gid-1],sessionThen,sessionCheck??playCheck,GameRuntime.Game(gid),localSetup.Game[gid-1],GameRuntime.DataFolderFor(gid),
         delegate(RuntimeSettings s){GameRuntime.Save(GameRuntime.SettingsPath,s,gid);},delegate{if(screen=="Setup")Render();},delegate{sessionLog.Add("preferences-save-failed");});
       host.GameSettings=delegate{return gameSource.List();};host.SetGameSetting=gameSource.Change;host.GameSettingsPending=gameSource.Pending;
+      // overlay: live control of the game (contract 2.34). The overlay hands over one command line; this writes the game's command file (LiveControl.Send: temp file, then rename). Only a program that reports 'live-control' is offered it.
+      var liveCheck=sessionCheck??playCheck;bool liveControl=liveCheck!=null&&liveCheck.HasLiveControl;string liveFile=GameRuntime.ControlFilePath(GameRuntime.DataFolderFor(gid));var liveStart=sessionThen??runtimes[gid-1];
+      if(liveControl){host.GameCommand=delegate(string line){if(!LiveControl.Send(liveFile,line))sessionLog.Add("live-control-failed");};host.GameVolume=delegate{return liveStart.Volume/100.0;};host.GameMuted=delegate{return liveStart.Mute;};host.GameState=delegate{var ls=LiveControl.ReadState(liveFile);return ls==null?null:new GameLiveState{Paused=ls.Paused,Muted=ls.Mute,Fullscreen=ls.Fullscreen,Unlimited=ls.Unlimited,Volume=ls.Volume,LastShot=ls.LastShot};};}
       pictureBackend=new DeckPrismBackend(AppDomain.CurrentDomain.BaseDirectory,DeckPaths.Root);
       host.ApplyPicture=delegate(string mode){ApplyPicture(session,mode);};
       host.PictureStatus=delegate{return pictureStatus;};host.PictureSelected=delegate{return pictureSelected;};host.PictureBusy=delegate{return pictureBusy;};
       host.PicturePresentationForeground=delegate{return pictureBackend!=null&&pictureBackend.OwnsForegroundWindow();};host.LauncherForeground=delegate{return IsActive;};
       var overlayOptions=OverlaySettings.Load(OverlaySettings.PathName);
       if(!overlayOptions.Enabled)return; // the developer switched the overlay off in overlay.txt: no pill and no hotkey
-      overlay=GameOverlay.Attach(session.Process.Id,host,overlayOptions,OverlaySettings.PathName,OverlayFeatures.None,null,true);
+      overlay=GameOverlay.Attach(session.Process.Id,host,overlayOptions,OverlaySettings.PathName,liveControl?new OverlayFeatures(new[]{OverlayLayout.LiveControl}):OverlayFeatures.None,null,true);
     }catch{overlay=null;}
   }
   void PictureChanged(){try{if(overlay!=null)overlay.RefreshPictureStatus();}catch{}}
@@ -990,15 +996,32 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
         var lm=Toggle(runtime.LockMarker2);
         System.Windows.Automation.AutomationProperties.SetName(lm,"Legends 2 lock-on marker");System.Windows.Automation.AutomationProperties.SetAutomationId(lm,"lock-marker-2");lm.IsEnabled=!running;
         RoutedEventHandler lmChanged=delegate{runtime.LockMarker2=lm.IsChecked==true;SaveRuntime();};lm.Checked+=lmChanged;lm.Unchecked+=lmChanged;
-        SettingRow(t,"Off by default. On: the marker over the locked target looks like the one in Mega Man Legends 2: four yellow triangles pointing in at it and two arcs turning round it. Yellow means a shot can hit; dull orange means the camera is not on it yet; red means it is off the screen. Used with the target lock-on. Applies the next time you press Play.",lm);});
+        SettingRow(t,"On by default. On: the marker over the locked target looks like the one in Mega Man Legends 2: four yellow triangles pointing in at it and two arcs turning round it. Yellow means a shot can hit; dull orange means the camera is not on it yet; red means it is off the screen. Off: the single arrow of the original game. Used with the target lock-on. Applies the next time you press Play.",lm);});
       if(playCheck.HasZTarget)add("Target lock-on",delegate(string t){
         var zt=Toggle(!runtime.ZTargetOff);
         System.Windows.Automation.AutomationProperties.SetName(zt,"Target lock-on");zt.IsEnabled=!running;
         RoutedEventHandler ztChanged=delegate{runtime.ZTargetOff=zt.IsChecked!=true;SaveRuntime();};zt.Checked+=ztChanged;zt.Unchecked+=ztChanged;
         SettingRow(t,"On: hold the right trigger to lock the nearest enemy in view. The game's own lock-on names the target (the same enemy the original game would lock, from any direction), Mega Man turns to face it and the camera swings in behind him. The left stick then circles the target and walks toward or away from it; flick the right stick sideways to pick another target. Let go to be free again. Off: the game's own lock-on. Not tried on a real pad yet. Applies the next time you press Play. Used with third-person controls.",zt);});
-      if(playCheck.HasPadMap)add("Gamepad buttons",delegate(string t){SettingRow(t,"To change what a gamepad button does, edit "+GameRuntime.PadMapPath(GameData)+" (the launcher creates it with every default listed, commented out; it never overwrites your copy). Used with third-person controls.",null);});
     }
     // Settings that live on another screen still have their line here, so that nothing can be found only somewhere else.
+    // The Jet Skates of Legends 1 (contracts 2.31 to 2.33; owner, 2026-11-22): all on by default, only the off choice is passed
+    if(playCheck.HasSkateShoot)add("Shoot on the Jet Skates",delegate(string t){
+      var ssh=Toggle(!runtime.NoSkateShoot);
+      System.Windows.Automation.AutomationProperties.SetName(ssh,"Shoot on the Jet Skates");System.Windows.Automation.AutomationProperties.SetAutomationId(ssh,"skate-shoot");ssh.IsEnabled=!running;
+      RoutedEventHandler sshChanged=delegate{runtime.NoSkateShoot=ssh.IsChecked!=true;SaveRuntime();};ssh.Checked+=sshChanged;ssh.Unchecked+=sshChanged;
+      SettingRow(t,"On (the default): the buster and the special weapon fire while you skate. Off: the skates work as in the original game. Applies the next time you press Play.",ssh);});
+    if(playCheck.HasSkateLock)add("Lock on while skating",delegate(string t){
+      var slk=Toggle(!runtime.NoSkateLock);
+      System.Windows.Automation.AutomationProperties.SetName(slk,"Lock on while skating");System.Windows.Automation.AutomationProperties.SetAutomationId(slk,"skate-lock");slk.IsEnabled=!running;
+      RoutedEventHandler slkChanged=delegate{runtime.NoSkateLock=slk.IsChecked!=true;SaveRuntime();};slk.Checked+=slkChanged;slk.Unchecked+=slkChanged;
+      SettingRow(t,"On (the default): hold R2 to lock an enemy while you skate. The camera follows it and you keep steering the skates. Needs the third-person controls and the target lock-on. Applies the next time you press Play.",slk);});
+    if(playCheck.HasSkateToggle)add("Hold Circle to start skates, press Circle to stop",delegate(string t){
+      var stg=Toggle(!runtime.NoSkateToggle);
+      System.Windows.Automation.AutomationProperties.SetName(stg,"Hold Circle to start skates, press Circle to stop");System.Windows.Automation.AutomationProperties.SetAutomationId(stg,"skate-toggle");stg.IsEnabled=!running;
+      RoutedEventHandler stgChanged=delegate{runtime.NoSkateToggle=stg.IsChecked!=true;SaveRuntime();};stg.Checked+=stgChanged;stg.Unchecked+=stgChanged;
+      SettingRow(t,"On (the default): hold Circle to put the skates on, then let go and keep skating. Press Circle again to take them off. Off: the skates last only while Circle is held. Needs smooth movement; with the original movement nothing changes. Applies the next time you press Play.",stg);});
+    if(playCheck.HasPadMap)add("Gamepad buttons",delegate(string t){SettingRow(t,"Choose what each button of an Xbox or PlayStation 5 pad does in the game. Button changes work with the original controls and with the third-person controls. The same screen has the stick dead zone of the third-person controls. Applies the next time the game starts.",SetButton("Edit gamepad buttons",delegate{if(!padDirty)padDraft=null;Navigate("Gamepad");}));});
+    if(!playCheck.HasPadMap)add("Gamepad buttons",delegate(string t){SettingRow(t,game==1?"Xbox and PlayStation 5 pads work. Changing what each pad button does needs the Mega Man Legends game program to be set up (see Game setup and readiness); then the editor opens from here.":"Xbox and PlayStation 5 pads work with their usual buttons. Changing what each pad button does: coming soon for this game.",null);});
     add("Keyboard keys",delegate(string t){SettingRow(t,"Which keyboard key stands for each button of the game's pad. The list of keys is at the bottom of the game setup screen. A gamepad also works.",SetButton("Edit keys",delegate{Navigate("Preflight");}));});
     add("Memory card",delegate(string t){SettingRow(t,"The saves of this game. Back up, restore or replace the memory card on the Saves screen.",SetButton("Open Saves",delegate{Navigate("Saves");}));});
     if(game==1)add("Widescreen (experimental)",delegate(string t){SettingRow(t,"Now: "+(runtimes[0].Widescreen?"On":"Off")+". A wider picture, about 16:9, for Mega Man Legends only. The switch and its full explanation are on the Scaling screen, in the part Game picture.",SetButton("Open Scaling",delegate{Navigate("Scaling");}));});
@@ -1016,6 +1039,15 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     if(keyDraft==null||!String.Equals(keyDraftFor,KeyData,StringComparison.OrdinalIgnoreCase)){LoadKeyDraft();keyNote="The keys on screen belonged to the other game, so nothing was saved. These are the keys of this game.";sessionLog.Add("keys-save-refused");return;}
     try{keyDraft.Save(GameRuntime.KeysPath(KeyData));LoadKeyDraft();keyNote="Keys saved. They apply the next time you press Play.";sessionLog.Add("keys-saved");}
     catch{keyNote="The keys could not be saved. Nothing was changed.";sessionLog.Add("keys-save-failed");}
+  }
+  // ---- gamepad map editor (SPEC-padmap.md). Edits stay in padDraft until "Save gamepad buttons"; nothing else writes the file. ----
+  void NeedPadDraft(){if(padDraft==null||!String.Equals(padDraftFor,PadData,StringComparison.OrdinalIgnoreCase))LoadPadDraft();}
+  void LoadPadDraft(){padDirty=false;padNote="";padDraftFor=PadData;try{padDraft=PadMap.Load(GameRuntime.PadMapPath(PadData));padLoadFailed=false;}catch{padDraft=PadMap.Defaults();padLoadFailed=true;}}
+  // The only place the gamepad map is written.
+  void SavePadDraft(){
+    if(padDraft==null||!String.Equals(padDraftFor,PadData,StringComparison.OrdinalIgnoreCase)){LoadPadDraft();padNote="Nothing was saved: the buttons on screen were out of date. These are the saved buttons.";return;}
+    try{padDraft.Save(GameRuntime.PadMapPath(PadData));LoadPadDraft();padNote="Gamepad buttons saved. They apply the next time the game starts (Play, or Restart in the in-game menu).";sessionLog.Add("gamepad-saved");}
+    catch{padNote="The gamepad buttons could not be saved. Nothing was changed.";sessionLog.Add("gamepad-save-failed");}
   }
   void SetKey(string button,string key){
     try{
@@ -1066,6 +1098,43 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     var discard=Control("Discard key changes",delegate{LoadKeyDraft();keyNote="Changes discarded.";Render();});discard.IsEnabled=keyDirty;
     var defaults=Control("Use the default keys",delegate{keyDraft=KeyMap.Defaults();keyDirty=true;keyCapture=null;keyNote="Default keys shown. Press Save keys to keep them.";Render();});
     actions.Children.Add(save);actions.Children.Add(discard);actions.Children.Add(defaults);LayoutToolbar(actions);page.Children.Add(actions);
+  }
+  void RenderPadEditor(){
+    NeedPadDraft();heading.Text="Gamepad buttons: "+GameRuntime.Game(1).Name;
+    bool tps=!runtimes[0].OriginalControls;
+    page.Children.Add(Label("Choose what each button of your Xbox or PlayStation 5 pad does in Mega Man Legends. Each line names the Xbox button first and the PlayStation 5 button in the same place second. \"Default\" keeps what the game does without changes. Changes are kept only when you press Save gamepad buttons, and they apply the next time the game starts (Play, or Restart in the in-game menu). The keyboard keys are not changed here.",16,"#AEC8DB"));
+    page.Children.Add(Label(tps?"Third-person controls are on (Settings), so the defaults shown are theirs: the left trigger aims. Camera behind Mega Man and Aim work only with the third-person controls.":"Third-person controls are off (Settings), so the defaults shown are the original controls: the left trigger gives L2. Camera behind Mega Man and Aim do nothing with the original controls.",16,"#AEC8DB"));
+    if(padLoadFailed)page.Children.Add(Label("The saved gamepad map could not be read, so the defaults are shown. Saving replaces it; the old file is kept beside it with .bak added.",16,"#FFCE83"));
+    if(padDraft.NotUnderstood>0)page.Children.Add(Label(padDraft.NotUnderstood+" line(s) in the saved gamepad map are not understood by the game, which skips them. Saving writes the buttons shown here. The file you had before the first save is kept beside it as pad-map.txt.before-editor, and the last one as pad-map.txt.bak.",16,"#FFCE83"));
+    if(padDraft.LookSensitivity.HasValue||padDraft.LookInvert.HasValue)page.Children.Add(Label("The saved gamepad map also sets the camera speed or the camera invert. The camera settings on the Settings screen win over those lines. Saving keeps them.",16,"#AEC8DB"));
+    var missing=padDraft.Lost(tps);
+    if(missing.Count>0){var names=new List<string>();foreach(string a in missing)names.Add(PadMap.ActionLabel(a));page.Children.Add(Label("After your changes no pad button gives: "+String.Join(", ",names.ToArray())+". The keyboard keys still do.",16,"#FFCE83"));}
+    var shared=padDraft.Shared(tps);
+    if(shared.Count>0){var names=new List<string>();foreach(string a in shared)names.Add(PadMap.ActionLabel(a));page.Children.Add(Label("More than one pad button gives: "+String.Join(", ",names.ToArray())+".",16,"#AEC8DB"));}
+    var status=Label(padNote.Length>0?padNote:padDirty?"Unsaved gamepad changes.":"These are the saved gamepad buttons.",16,"#8BEFFF");System.Windows.Automation.AutomationProperties.SetAutomationId(status,"gamepad-status");page.Children.Add(status);
+    for(int each=0;each<PadMap.ButtonCount;each++){
+      int button=each;uint? set=padDraft.Get(button);
+      var list=new ComboBox();list.Items.Add("Default: "+PadMap.Describe(PadMap.Default(button,tps)));
+      foreach(string a in PadMap.Actions)list.Items.Add(PadMap.ActionLabel(a));
+      int at=0;
+      if(set.HasValue){int single=-1;for(int i=0;i<PadMap.Actions.Length;i++)if(PadMap.Bit(PadMap.Actions[i])==set.Value){single=i;break;}
+        if(single>=0)at=single+1;else{list.Items.Add(PadMap.Describe(set.Value));at=list.Items.Count-1;}}
+      list.SelectedIndex=at;list.FontSize=16;list.VerticalAlignment=VerticalAlignment.Center;
+      System.Windows.Automation.AutomationProperties.SetName(list,"Action for "+PadMap.ButtonLabel(button));System.Windows.Automation.AutomationProperties.SetAutomationId(list,"gamepad-"+PadMap.Buttons[button]);
+      list.SelectionChanged+=delegate{int i=list.SelectedIndex;if(i<0||i>PadMap.Actions.Length)return;uint? want=i==0?(uint?)null:PadMap.Bit(PadMap.Actions[i-1]);if(want==padDraft.Get(button))return;padDraft.Set(button,want);padDirty=true;padNote="";Dispatcher.BeginInvoke(new Action(Render));};
+      Row(PadMap.ButtonLabel(button),"Now: "+PadMap.Describe(padDraft.Effective(button,tps))+(set.HasValue?"":" (default)"),list);
+    }
+    Button save=null,discard=null;
+    var dz=new Slider{Minimum=PadMap.DeadzoneMin,Maximum=PadMap.DeadzoneMax,Value=padDraft.EffectiveDeadzone,TickFrequency=1,IsSnapToTickEnabled=true,IsMoveToPointEnabled=true,VerticalAlignment=VerticalAlignment.Center};
+    System.Windows.Automation.AutomationProperties.SetName(dz,"Stick dead zone");System.Windows.Automation.AutomationProperties.SetAutomationId(dz,"gamepad-deadzone");
+    dz.ValueChanged+=delegate{int v=(int)Math.Round(dz.Value);int? want=v==PadMap.DeadzoneDefault?(int?)null:v;if(want==padDraft.Deadzone)return;padDraft.Deadzone=want;padDirty=true;padNote="";status.Text="Unsaved gamepad changes.";if(save!=null)save.IsEnabled=true;if(discard!=null)discard.IsEnabled=true;};
+    Row("Stick dead zone","How far a stick must move, in percent of its travel, before the game reacts. "+PadMap.DeadzoneDefault+" is the default; a worn stick that drifts may need more. Used with the third-person controls (the original controls use their own fixed limit).",WithNumber(dz));
+    var actions=new Grid();
+    save=Control("Save gamepad buttons",delegate{SavePadDraft();Render();});save.IsEnabled=padDirty;
+    discard=Control("Discard gamepad changes",delegate{LoadPadDraft();padNote="Changes discarded.";Render();});discard.IsEnabled=padDirty;
+    var defaults=Control("Use the default buttons",delegate{var fresh=PadMap.Defaults();fresh.LookSensitivity=padDraft.LookSensitivity;fresh.LookInvert=padDraft.LookInvert;padDraft=fresh;padDirty=true;padNote="Default buttons and the default dead zone shown. Press Save gamepad buttons to keep them.";Render();});
+    actions.Children.Add(save);actions.Children.Add(discard);actions.Children.Add(defaults);LayoutToolbar(actions);page.Children.Add(actions);
+    var back=Control("Back to Settings",delegate{Navigate("Settings");});page.Children.Add(back);
   }
   void RenderHelp(){
     page.Children.Add(Label("About Flutter Deck",22));
@@ -1205,6 +1274,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     if(screen=="Music"){RenderMusic();return;}
     if(screen=="Scaling"){RenderScaling();return;}
     if(screen=="Preflight"){RenderPreflight();return;}
+    if(screen=="Gamepad"){RenderPadEditor();return;}
     if(screen=="Help"){RenderHelp();return;}
     if(screen=="Setup"){RenderSetup();return;}
     if(screen=="Saves")RenderSaveCards();

@@ -19,8 +19,8 @@ public sealed class UpdateCheck { public UpdateInfo Info; public byte[] Manifest
 
 public static class Updater {
   // Release identity of this build. release.ps1 reads these and refuses a Sequence that did not go up.
-  public const string Version="0.4.0";
-  public const int Sequence=2;
+  public const string Version="0.4.1";
+  public const int Sequence=3;
   public const string Product="flutterdeck",Channel="stable",Platform="win-x64",FileName="FlutterDeck.exe";
   public const string ManifestUrl="https://raw.githubusercontent.com/raiinman/Flutter-Deck/main/update/manifest.xml";
   public const string SignatureUrl="https://raw.githubusercontent.com/raiinman/Flutter-Deck/main/update/manifest.sig";

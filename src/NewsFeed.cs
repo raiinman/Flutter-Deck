@@ -9,6 +9,10 @@ using System.Threading;
 public sealed class NewsItem { public string Id,Kind,Title,Body; public DateTime Date; public string Fingerprint {get{return NewsFeed.Hash(Id+"\n"+Kind+"\n"+Title+"\n"+Body+"\n"+Date.ToString("o"));}} }
 public static class NewsFeed {
  public const int MaxBytes=131072;
+ // The public notice board (developer, 2026-11-22: a file in the public repository, built in like the updater's address).
+ // publisher-feed.txt beside the launcher is an optional override: absent or blank means this address.
+ public const string DefaultEndpoint="https://raw.githubusercontent.com/raiinman/Flutter-Deck/main/news/news.xml";
+ public static string Choose(string configText){string t=(configText??"").Trim();return t.Length>0?t:DefaultEndpoint;}
  public static string Hash(string value){using(var h=SHA256.Create())return BitConverter.ToString(h.ComputeHash(Encoding.UTF8.GetBytes(value))).Replace("-","");}
  public static Uri Endpoint(string text){Uri u;if(!Uri.TryCreate(text,UriKind.Absolute,out u)||u.Scheme!="https"||!u.IsDefaultPort||u.UserInfo.Length>0||u.Query.Length>0||u.Fragment.Length>0||(u.Host!="raw.githubusercontent.com"&&u.Host!="raiinman.github.io")||(u.Host=="raw.githubusercontent.com"&&!u.AbsolutePath.StartsWith("/raiinman/",StringComparison.Ordinal)))throw new InvalidDataException("Invalid publisher endpoint");return u;}
  static string Text(XmlElement e,string name,int max){var n=e.SelectSingleNode(name) as XmlElement;if(n==null||n.ChildNodes.Count!=1||n.FirstChild.NodeType!=XmlNodeType.Text||String.IsNullOrWhiteSpace(n.InnerText)||n.InnerText.Length>max)throw new InvalidDataException("Invalid field");return n.InnerText;}

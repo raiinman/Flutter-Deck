@@ -47,6 +47,17 @@ foreach($g in @('GameOverlay.Attach(','overlay.Dispose();')){if(-not $p.Contains
 if(([regex]::Matches($p,'GameOverlay\.Attach\(')).Count -ne 1){throw 'The overlay must be started from exactly one place'}
 if(([regex]::Matches($p,'OverlayGameSettings\.ForSession\(')).Count -ne 1){throw 'Program.cs must build the overlay game settings in exactly one place (OverlayGameSettings.ForSession)'}
 if($p -cmatch 'OverlayGameSettings\.(Build|Set|Differs)\('){throw 'Program.cs must reach the overlay game settings only through OverlayGameSettings.ForSession'}
+$allSrc=(Get-ChildItem *.cs | Where-Object {$_.Name -notmatch 'Test' -and $_.Name -ne 'GameRuntime.cs'} | ForEach-Object {Get-Content $_.FullName -Raw}) -join "`n"
+if(([regex]::Matches($allSrc,'LiveControl\.Send\(')).Count -ne 1){throw 'The launcher must write the game control file from exactly one place (LiveControl.Send)'}
+if(([regex]::Matches($p,'host\.GameCommand\s*=(?!=)')).Count -ne 1){throw 'Program.cs must give the overlay its game command callback in exactly one place'}
+if(([regex]::Matches($allSrc,'liveFile')).Count -ne 3){throw 'liveFile may appear in the launcher sources only where it is made, handed to LiveControl.Send and handed to LiveControl.ReadState'}
+if(([regex]::Matches($allSrc,'ControlFilePath')).Count -ne 1){throw 'Only Program.cs may name the game control file, once; everything else goes through LiveControl'}
+if($p -cnotmatch 'liveControl=liveCheck!=null&&liveCheck\.HasLiveControl'){throw 'Program.cs must offer live control only when the running game program reports it'}
+if($p -cnotmatch 'ControlFilePath\(GameRuntime\.DataFolderFor\(gid\)\)'){throw 'Program.cs must use the control file of the RUNNING game (gid)'}
+$gr=Get-Content GameRuntime.cs -Raw
+if($gr -cnotmatch 'check\.HasLiveControl\),StartedUtc'){throw 'GameRuntime.cs must pass the live-control choice to the play arguments'}
+if($gr -cnotmatch 'LiveControl\.Reset\(ControlFilePath\(data\)\);foreach\(string stale'){throw 'GameRuntime.cs must clear the waiting live-control commands BEFORE it deletes the old control files (a timer could otherwise write them for the new game)'}
+if($gr -cnotmatch 'r\.HasLiveControl=kind\.Id==1&&fs\.Contains\("live-control"\)'){throw 'Only Legends 1 may report live control'}
 # Per-monitor screen scale: the manifest is embedded by ..\scripts\build.ps1 and the program says it targets .NET Framework 4.8 (WPF needs both).
 if(-not $b.Contains('/win32manifest:FlutterDeck.manifest')){throw '..\scripts\build.ps1 must embed FlutterDeck.manifest'}
 if(-not (Get-Content FlutterDeck.manifest -Raw).Contains('PerMonitorV2')){throw 'FlutterDeck.manifest must declare PerMonitorV2'}

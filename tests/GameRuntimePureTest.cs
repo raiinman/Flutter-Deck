@@ -11,6 +11,8 @@ using System.Threading;
 public static class GameRuntimePureTest {
   static int failures=0;
   static void Check(bool ok,string name){if(!ok){failures++;Console.WriteLine("FAIL: "+name);}}
+  static string TakeLikeGame(string f){File.Move(f,f+".taken");string txt=File.ReadAllText(f+".taken");File.Delete(f+".taken");return txt;}   // what the game does with the control file
+  static bool WaitForFile(string f,int ms){for(int t=0;t<ms;t+=20){if(File.Exists(f))return true;System.Threading.Thread.Sleep(20);}return File.Exists(f);}
   static void Throws<T>(Action action,string name) where T:Exception {try{action();failures++;Console.WriteLine("FAIL (no error): "+name);}catch(T){}}
   static string Here {get{return Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);}}
 
@@ -143,13 +145,76 @@ public static class GameRuntimePureTest {
       var lm2=new RuntimeSettings{Program=program,WindowHeight=720,Volume=80,OriginalPicture=true,LockMarker2=true};
       Check(GameRuntime.BuildArguments(lm2,cue,data,true,true,false,false,false,false,false,false,null,lockMarker2Option:true).EndsWith(" --lock-marker 2"),"the marker choice adds --lock-marker 2 at the end for Legends 1");
       Check(!GameRuntime.BuildArguments(lm2,cue,data,true,true,false,false,false,false,false,false,null,lockMarker2Option:false).Contains("--lock-marker"),"no --lock-marker for a program that does not report lock-marker-2");
-      Check(!GameRuntime.BuildArguments(new RuntimeSettings{Program=program,WindowHeight=720,Volume=80,OriginalPicture=true},cue,data,true,true,false,false,false,false,false,false,null,lockMarker2Option:true).Contains("--lock-marker"),"with the choice off nothing is passed: the program keeps its single arrow");
+      Check(new RuntimeSettings().LockMarker2,"the Legends 2 marker is on by default (owner, 2026-11-22)");
+      {string lmPath=Path.Combine(root,"runtime-lockmarker.xml");var off=new RuntimeSettings{Program=program,LockMarker2=false};GameRuntime.Save(lmPath,off);
+       Check(!GameRuntime.Load(lmPath).LockMarker2,"a player who switched the Legends 2 marker off keeps it off");
+       GameRuntime.Save(lmPath,new RuntimeSettings{Program=program});Check(GameRuntime.Load(lmPath).LockMarker2,"switched on, it stays on");
+       string old=File.ReadAllText(lmPath);old=System.Text.RegularExpressions.Regex.Replace(old," lockMarker=\"[a-z]+\"","");old=old.Replace("lockMarker2=\"1\"","lockMarker2=\"0\"");File.WriteAllText(lmPath,old);
+       Check(!old.Contains("lockMarker=")&&old.Contains("lockMarker2=\"0\"")&&GameRuntime.Load(lmPath).LockMarker2,"a settings file from 0.4.0 (lockMarker2=\"0\" written for a row nobody saw) gets the marker on");}
+      Check(!GameRuntime.BuildArguments(new RuntimeSettings{Program=program,WindowHeight=720,Volume=80,OriginalPicture=true,LockMarker2=false},cue,data,true,true,false,false,false,false,false,false,null,lockMarker2Option:true).Contains("--lock-marker"),"with the choice off nothing is passed: the program keeps its single arrow");
       Check(!GameRuntime.BuildArguments(lm2,cue2,dataTwo,true,true,false,false,false,false,false,false,k2,lockMarker2Option:true).Contains("--lock-marker"),"--lock-marker is never passed to Legends 2");
       var nf=new RuntimeSettings{Program=program,WindowHeight=720,Volume=80,OriginalPicture=true,NoLockFlick=true};
       Check(GameRuntime.BuildArguments(nf,cue,data,true,true,false,false,false,false,false,false,null,lockFlickOption:true).EndsWith(" --lock-flick 0"),"only the off choice of the flick is passed (on is the program's default)");
       Check(!GameRuntime.BuildArguments(new RuntimeSettings{Program=program,WindowHeight=720,Volume=80,OriginalPicture=true},cue,data,true,true,false,false,false,false,false,false,null,lockFlickOption:true).Contains("--lock-flick"),"with the flick on nothing is passed");
       Check(!GameRuntime.BuildArguments(nf,cue,data,true,true,false,false,false,false,false,false,null,lockFlickOption:false).Contains("--lock-flick"),"no --lock-flick for a program that does not report it");
       Check(!GameRuntime.BuildArguments(nf,cue2,dataTwo,true,true,false,false,false,false,false,false,k2,lockFlickOption:true).Contains("--lock-flick"),"--lock-flick is never passed to Legends 2");
+      Check(GameRuntime.BuildArguments(nf,cue,data,true,true,false,false,false,false,false,false,null,liveControlOption:true).Contains(" --control-file \""+GameRuntime.ControlFilePath(data)+"\""),"live control: --control-file with the command file path is passed to a program that reports it");
+      Check(!GameRuntime.BuildArguments(nf,cue,data,true,true,false,false,false,false,false,false,null,liveControlOption:false).Contains("--control-file"),"live control: nothing is passed to a program that does not report it");
+      Check(!GameRuntime.BuildArguments(nf,cue2,dataTwo,true,true,false,false,false,false,false,false,k2,liveControlOption:true).Contains("--control-file"),"live control: --control-file is never passed to Legends 2");
+      {
+        string lcDir=Path.Combine(Path.GetTempPath(),"fd-live-control-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(lcDir);string lcFile=Path.Combine(lcDir,"live-control.txt");
+        try{
+          Check(LiveControl.Send(lcFile,"pause on")&&File.ReadAllText(lcFile)=="pause on\n"&&!File.Exists(lcFile+".tmp"),"live control: a command is written as a file and no temp file is left");
+          LiveControl.Send(lcFile,"mute on");
+          Check(File.ReadAllText(lcFile)=="pause on\n","live control: while the game has not taken the file, a new command waits in memory and the file is not rewritten (so nothing runs twice)");
+          Check(TakeLikeGame(lcFile)=="pause on\n"&&WaitForFile(lcFile,3000)&&File.ReadAllText(lcFile)=="mute on\n","live control: once the game took the file, the waiting command is written as the next file");
+          TakeLikeGame(lcFile);
+          Check(!LiveControl.Send(lcFile,"")&&!LiveControl.Send(lcFile,"bad\nline")&&!LiveControl.Send(lcFile,new string('x',41))&&!LiveControl.Send(null,"pause on")&&!File.Exists(lcFile),"live control: an empty line, a line with a line break, a long line or no path is refused and nothing is written");
+          LiveControl.Send(lcFile,"volume 10");LiveControl.Send(lcFile,"volume 20");LiveControl.Send(lcFile,"volume 30");LiveControl.Send(lcFile,"pause on");LiveControl.Send(lcFile,"pause off");LiveControl.Send(lcFile,"screenshot");LiveControl.Send(lcFile,"screenshot");
+          Check(TakeLikeGame(lcFile)=="volume 10\n"&&WaitForFile(lcFile,3000)&&TakeLikeGame(lcFile)=="volume 30\npause off\nscreenshot\nscreenshot\n","live control: a newer volume, pause, mute or speed line replaces an older one that still waits; two screenshots stay two");
+          {
+            var got=new System.Collections.Generic.List<string>();var sizes=new System.Collections.Generic.List<int>();bool stopTaker=false;
+            var taker=new System.Threading.Thread(delegate(){while(!stopTaker){try{if(File.Exists(lcFile)){string txt=TakeLikeGame(lcFile);lock(got){foreach(string l in txt.Split(new[]{'\n'},StringSplitOptions.RemoveEmptyEntries))got.Add(l);sizes.Add(Encoding.ASCII.GetByteCount(txt));}}}catch(IOException){}System.Threading.Thread.Sleep(60);}});
+            taker.Start();
+            for(int i=0;i<300;i++){LiveControl.Send(lcFile,"x"+i);System.Threading.Thread.Sleep(2);}
+            for(int w=0;w<100;w++){lock(got){if(got.Count>=300)break;}System.Threading.Thread.Sleep(50);}
+            stopTaker=true;taker.Join();
+            lock(got){
+              bool inOrder=got.Count==300;for(int i=0;i<got.Count&&inOrder;i++)if(got[i]!="x"+i)inOrder=false;
+              int big=0;foreach(int sz in sizes)if(sz>=1024)big++;
+              Check(inOrder,"live control: 300 commands sent quickly while a stand-in game takes the file every 60 ms all arrive once and in order ("+got.Count+" of 300)");
+              Check(big==0&&sizes.Count>1,"live control: no file is over 1024 bytes ("+sizes.Count+" files)");
+            }
+          }
+          {int cnt;var qq=new System.Collections.Generic.List<string>();for(int i=0;i<60;i++)LiveControl.Add(qq,"line"+(i%10)+" abcdefghijklmnopqrstuvwxyz");string ft=LiveControl.FileText(qq,out cnt);Check(cnt<=30&&Encoding.ASCII.GetByteCount(ft)<=900&&cnt==ft.Split(new[]{'\n'},StringSplitOptions.RemoveEmptyEntries).Length&&qq.Count==60,"live control: one file holds at most 30 lines and 900 bytes, and building it removes nothing");}
+          {int cnt;var qs=new System.Collections.Generic.List<string>();for(int i=0;i<150;i++)LiveControl.Add(qs,"s"+i);string fs=LiveControl.FileText(qs,out cnt);Check(cnt==30&&fs.Split(new[]{'\n'},StringSplitOptions.RemoveEmptyEntries).Length==30,"live control: short lines are held to 30 per file as well (the game reads 32)");}
+          {string rf=Path.Combine(lcDir,"reset.txt");LiveControl.Send(rf,"pause on");LiveControl.Send(rf,"mute on");LiveControl.Reset(rf);File.Delete(rf);System.Threading.Thread.Sleep(250);Check(!File.Exists(rf),"live control: a new game starts clean, commands that waited for the old game are never written for the new one");}
+          {string ff=Path.Combine(lcDir,"full.txt");LiveControl.Send(ff,"fullscreen toggle");int accepted=0;for(int i=0;i<250;i++)if(LiveControl.Send(ff,"screenshot"))accepted++;LiveControl.Reset(ff);File.Delete(ff);Check(accepted==200,"live control: when 200 commands wait, the next ones are refused (so the launcher can log it), not dropped quietly ("+accepted+" accepted)");}
+          File.WriteAllText(lcFile+".state","paused 1\r\nvolume 35\r\nmute 0\r\nfullscreen 1\r\nlast_screenshot C:\\runs\\a b\\shot_f000012.bmp\r\n");
+          var lcState=LiveControl.ReadState(lcFile);
+          Check(lcState!=null&&lcState.Paused&&lcState.Volume==35&&!lcState.Mute&&lcState.Fullscreen&&lcState.LastShot==@"C:\runs\a b\shot_f000012.bmp","live control: the state file is read (CR LF, a picture path with spaces)");
+          File.WriteAllText(lcFile+".state","paused 0\nvolume 250\nmute 1\nfullscreen 0\nlast_screenshot \n");
+          lcState=LiveControl.ReadState(lcFile);Check(lcState!=null&&!lcState.Paused&&lcState.Volume==100&&lcState.Mute&&!lcState.Fullscreen&&lcState.LastShot=="","live control: a volume over 100 is held at 100 and an empty screenshot line is empty");
+          File.WriteAllText(lcFile+".state","paused 0\nvolume 50\nmute 0\nfullscreen 0\nlast_screenshot \nunlimited_speed 1\n");
+          Check(LiveControl.ReadState(lcFile).Unlimited,"live control: the unlimited speed line is read");
+          File.WriteAllText(lcFile+".state","paused 0\nvolume 50\n");Check(!LiveControl.ReadState(lcFile).Unlimited,"live control: a state file without the speed line means normal speed");
+          File.Delete(lcFile+".state");Check(LiveControl.ReadState(lcFile)==null,"live control: no state file gives nothing");
+          File.WriteAllText(lcFile+".state","nonsense\n");Check(LiveControl.ReadState(lcFile)==null&&LiveControl.ParseState("")==null&&LiveControl.ParseState(null)==null&&LiveControl.ParseState("paused 1\n")==null,"live control: a damaged or half-written state file gives nothing");
+          using(var lcStateHold=new FileStream(lcFile+".state",FileMode.Create,FileAccess.Write,FileShare.ReadWrite)){var hbytes=Encoding.ASCII.GetBytes("paused 0\nvolume 5\n");lcStateHold.Write(hbytes,0,hbytes.Length);lcStateHold.Flush();var lcStateRead=LiveControl.ReadState(lcFile);Check(lcStateRead!=null&&lcStateRead.Volume==5,"live control: a state file the game still has open is read");}
+          {int cnt;var qq=new System.Collections.Generic.List<string>();LiveControl.Add(qq,"fullscreen toggle");Check(LiveControl.FileText(qq,out cnt)=="fullscreen toggle\n"&&cnt==1,"live control: the file text is one line per command");}
+        }finally{try{Directory.Delete(lcDir,true);}catch(Exception){}}
+      }
+      {   // the Jet Skates of Legends 1 (contracts 2.31 to 2.33): on by default, only the off choice is passed, never to another game
+        var sk=new RuntimeSettings{Program=program,WindowHeight=720,Volume=80,NoSkateShoot=true,NoSkateLock=true,NoSkateToggle=true};
+        string skl=GameRuntime.BuildArguments(sk,cue,data,true,true,false,false,false,false,false,false,null,skateShootOption:true,skateLockOption:true,skateToggleOption:true);
+        Check(skl.Contains(" --skate-shoot 0")&&skl.Contains(" --skate-lock 0")&&skl.Contains(" --skate-toggle 0"),"the three skates choices are passed when switched off: "+skl);
+        string skOn=GameRuntime.BuildArguments(new RuntimeSettings{Program=program,WindowHeight=720,Volume=80},cue,data,true,true,false,false,false,false,false,false,null,skateShootOption:true,skateLockOption:true,skateToggleOption:true);
+        Check(!skOn.Contains("--skate-")&&!new RuntimeSettings().NoSkateShoot&&!new RuntimeSettings().NoSkateLock&&!new RuntimeSettings().NoSkateToggle,"all three on by default, and on passes nothing");
+        Check(!GameRuntime.BuildArguments(sk,cue,data,true,true,false,false,false,false,false,false,null).Contains("--skate-"),"nothing for a program that does not report the words");
+        Check(!GameRuntime.BuildArguments(sk,cue2,dataTwo,true,true,false,false,false,false,false,false,k2,skateShootOption:true,skateLockOption:true,skateToggleOption:true).Contains("--skate-"),"never passed to Legends 2");
+        string skPath=Path.Combine(root,"runtime-skates.xml");GameRuntime.Save(skPath,sk);var skBack=GameRuntime.Load(skPath);
+        Check(skBack.NoSkateShoot&&skBack.NoSkateLock&&skBack.NoSkateToggle,"the three choices are saved and read back");
+      }
       // ---- the third game: The Misadventures of Tron Bonne (contract T-2) ----
       var k3=GameRuntime.Tron;string data3=Path.Combine(root,"games","tron data");
       Check(GameRuntime.Game(3)==k3&&GameRuntime.Game(2)==k2&&GameRuntime.Game(1)==GameRuntime.Legends1&&GameRuntime.GameCount==3&&GameRuntime.IsGame(1)&&GameRuntime.IsGame(3)&&!GameRuntime.IsGame(0)&&!GameRuntime.IsGame(4)&&!GameRuntime.IsGame(-1),"three games, and no other number is one");
@@ -350,6 +415,7 @@ public static class GameRuntimePureTest {
     {string tmpv=Path.Combine(Path.GetTempPath(),"fd-levels-"+Guid.NewGuid().ToString("N")+".xml");try{GameRuntime.Save(tmpv,vsv);var vsBack=GameRuntime.Load(tmpv);Check(vsBack.MusicVolume==40&&vsBack.VoiceVolume==0&&vsBack.EffectsVolume==75,"the three levels are saved and read back");}finally{if(File.Exists(tmpv))File.Delete(tmpv);if(File.Exists(tmpv+".bak"))File.Delete(tmpv+".bak");}}
     Check(new RuntimeSettings().MusicVolume==100&&new RuntimeSettings().VoiceVolume==100&&new RuntimeSettings().EffectsVolume==100,"a new settings object starts with every level at 100");
     var vsOld=variant("contract 2.12 copy again","identity-features.txt","identity,card-new,exe-from-disc,run-dir-created,fail-file,settings,volume,present,hires,hires-filter,first-boot-picture,window-height,controller-hid,rumble,intro-movie");File.WriteAllText(Path.Combine(Path.GetDirectoryName(vsOld.Program),"identity-contract.txt"),"2.12");Check(!GameRuntime.Readiness(vsOld,cue,data,known,true).HasVolumeSplit,"a program without the feature does not report the level options");}
+    {var lcv=variant("contract 2.34 copy","identity-features.txt","identity,card-new,exe-from-disc,run-dir-created,fail-file,settings,volume,present,hires,hires-filter,first-boot-picture,window-height,controller-hid,rumble,intro-movie,volume-split,teleport,live-control");File.WriteAllText(Path.Combine(Path.GetDirectoryName(lcv.Program),"identity-contract.txt"),"2.34");var lcr=GameRuntime.Readiness(lcv,cue,data,known,true);Check(lcr.Ready&&lcr.HasLiveControl,"a program with contract 2.34 and the live-control feature is ready and reports it: "+lcr.Problem);}
     {var tpv=variant("contract 2.14 copy","identity-features.txt","identity,card-new,exe-from-disc,run-dir-created,fail-file,settings,volume,present,hires,hires-filter,first-boot-picture,window-height,controller-hid,rumble,intro-movie,volume-split,teleport");File.WriteAllText(Path.Combine(Path.GetDirectoryName(tpv.Program),"identity-contract.txt"),"2.14");var tpr=GameRuntime.Readiness(tpv,cue,data,known,true);Check(tpr.Ready&&tpr.HasTeleport,"a program with contract 2.14 and the teleport feature is ready and reports it: "+tpr.Problem);
     tpv.Teleport=false;Check(!GameRuntime.BuildArguments(tpv,cue,data,true,true,false,false,false,false,true,false,null,true,false,false,true,true).Contains("--teleport-file"),"teleport switched off: nothing is passed");
     tpv.Teleport=true;string tpOn=GameRuntime.BuildArguments(tpv,cue,data,true,true,false,false,false,false,true,false,null,true,false,false,true,true);Check(tpOn.Contains(" --teleport-file \""+GameRuntime.TeleportRequestPath(data)+"\""),"teleport ticked: --teleport-file with the request path is passed");

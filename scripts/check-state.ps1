@@ -17,7 +17,7 @@ $a=Get-Content DeckAudio.cs -Raw
 foreach($g in @('Failed=true','if(Failed){Select(Index,true);return;}','var p=new MediaPlayer();player=p;','if(p!=player)return;','DispatcherTimer{Interval=TimeSpan.FromSeconds(LoadSeconds)}')){if(-not $a.Contains($g)){throw "Missing audio state guard: $g"}}
 # Navigate() silently ignores unknown names, so every literal target and nav entry must be in the screen table.
 $ids=[regex]::Matches([regex]::Match($d,'Ids=\{([^}]*)\}').Groups[1].Value,'"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
-if(@($ids).Count -ne 11){throw 'Screen table not found in DeckState.cs'}   # 11 since 2026-11-20: Advanced (Advanced Settings) joined
+if(@($ids).Count -ne 12){throw 'Screen table not found in DeckState.cs'}   # 11 since 2026-11-20: Advanced (Advanced Settings) joined; 12 since 2026-11-22: Gamepad (the gamepad button editor)
 $targets=@([regex]::Matches($s,'Navigate\("([^"]+)"\)') | ForEach-Object { $_.Groups[1].Value })+@([regex]::Matches([regex]::Match($s,'screens=\{([^}]*)\}').Groups[1].Value,'"([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
 if($targets.Count -lt 20){throw 'Navigate targets not found in Program.cs'}
 foreach($t in $targets){if($ids -cnotcontains $t){throw "Navigate target not in screen table: $t"}}

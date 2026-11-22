@@ -2,7 +2,7 @@ using System;
 public static class DeckStatePureTest {
  static void Check(bool ok,string message){if(!ok)throw new Exception(message);}
  public static int Main(){
-  var screens=DeckState.Screens;Check(screens.Length==11,"screen count");
+  var screens=DeckState.Screens;Check(screens.Length==12,"screen count");
   foreach(string id in screens){Check(DeckState.IsScreen(id),"known "+id);Check(!String.IsNullOrEmpty(DeckState.Heading(id)),"heading "+id);}
   Check(!DeckState.IsScreen(null)&&!DeckState.IsScreen("")&&!DeckState.IsScreen("home")&&!DeckState.IsScreen("Features")&&!DeckState.IsScreen("Updates")&&!DeckState.IsScreen("Workshop")&&!DeckState.IsScreen("Gallery"),"unknown names refused");
   screens[0]="tampered";Check(DeckState.IsScreen("Home")&&!DeckState.IsScreen("tampered"),"screen list is not shared");

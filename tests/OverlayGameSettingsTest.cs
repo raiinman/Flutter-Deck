@@ -31,15 +31,24 @@ public static class OverlayGameSettingsTest {
     var noZ=All();noZ.HasZTarget=false;Check(Row(OverlayGameSettings.Build(s,noZ),"lock-on")==null,"a program that does not report lock-on gets no lock-on row");
     Check(OverlayGameSettings.Build(null,c).Count==0&&OverlayGameSettings.Build(s,null).Count==0,"no settings, no rows");
     {   // Legends 1: the Legends 2 look of the lock-on marker (contract 2.29, L16)
-      var mC=All();mC.HasLockMarker2=true;var mS=new RuntimeSettings();
+      var mC=All();mC.HasLockMarker2=true;var mS=new RuntimeSettings{LockMarker2=false};
       var mR=OverlayGameSettings.Build(mS,mC);
-      Check(Row(mR,"lock-marker-style")!=null&&Row(mR,"lock-marker-style").IsSwitch&&Row(mR,"lock-marker-style").Value==0,"a program that reports lock-marker-2 gets a marker look switch, off by default");
+      Check(Row(mR,"lock-marker-style")!=null&&Row(mR,"lock-marker-style").IsSwitch&&Row(mR,"lock-marker-style").Value==0,"a program that reports lock-marker-2 gets a marker look switch (here switched off)");
+      Check(Row(OverlayGameSettings.Build(new RuntimeSettings(),mC),"lock-marker-style").Value==1,"the Legends 2 marker is on by default (owner, 2026-11-22)");
       Check(Row(OverlayGameSettings.Build(mS,All()),"lock-marker-style")==null,"a program that does not report it gets no row");
       Check(OverlayGameSettings.Set(mS,mC,"lock-marker-style",1)==""&&mS.LockMarker2,"the switch is taken");
       var fC=All();fC.HasLockFlick=true;var fS=new RuntimeSettings();
       Check(Row(OverlayGameSettings.Build(fS,fC),"lock-flick")!=null&&Row(OverlayGameSettings.Build(fS,fC),"lock-flick").Value==1&&Row(OverlayGameSettings.Build(fS,All()),"lock-flick")==null,"the flick row only for a program that reports lock-flick, on by default");
       Check(OverlayGameSettings.Set(fS,fC,"lock-flick",0)==""&&fS.NoLockFlick,"the flick can be switched off");
-      var mRun=new RuntimeSettings();var mNow=OverlayGameSettings.Copy(mRun);OverlayGameSettings.Set(mNow,mC,"lock-marker-style",1);
+      var sC=All();sC.HasMovementOption=true;sC.HasSkateShoot=true;sC.HasSkateLock=true;sC.HasSkateToggle=true;var sS=new RuntimeSettings();var sR=OverlayGameSettings.Build(sS,sC);
+      Check(Row(sR,"skate-shoot")!=null&&Row(sR,"skate-shoot").Value==1&&Row(sR,"skate-lock").Value==1&&Row(sR,"skate-toggle").Value==1,"the three skates rows, on by default");
+      Check(Row(OverlayGameSettings.Build(sS,All()),"skate-shoot")==null&&Row(OverlayGameSettings.Build(sS,All()),"skate-toggle")==null,"no skates rows for a program without the words");
+      var sOrig=new RuntimeSettings{OriginalControls=true,OriginalMovement=true};var sOR=OverlayGameSettings.Build(sOrig,sC);
+      Check(!Row(sOR,"skate-lock").Enabled&&!Row(sOR,"skate-toggle").Enabled&&Row(sOR,"skate-shoot").Enabled,"lock on the skates waits for third-person controls, the toggle for smooth movement");
+      Check(OverlayGameSettings.Set(sS,sC,"skate-shoot",0)==""&&sS.NoSkateShoot&&OverlayGameSettings.Set(sS,sC,"skate-toggle",0)==""&&sS.NoSkateToggle,"the switches are taken");
+      var sRun=new RuntimeSettings();var sNow=OverlayGameSettings.Copy(sRun);OverlayGameSettings.Set(sNow,sC,"skate-lock",0);
+      Check(OverlayGameSettings.Differs(sRun,sNow,sC,GameRuntime.Legends1,Cue,Data),"a skates choice counts for a restart");
+      var mRun=new RuntimeSettings{LockMarker2=false};var mNow=OverlayGameSettings.Copy(mRun);OverlayGameSettings.Set(mNow,mC,"lock-marker-style",1);
       Check(OverlayGameSettings.Differs(mRun,mNow,mC,GameRuntime.Legends1,Cue,Data),"the marker look counts for a restart");
     }
     {   // Legends 2: the free camera (contract L2-4) and its two adjusters

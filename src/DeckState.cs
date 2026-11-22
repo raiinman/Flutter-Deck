@@ -26,11 +26,11 @@ public enum UpdatePhase { Off, Idle, Checking, Current, Available, Unreachable, 
 
 public static class DeckState {
   // Navigation order first, then the screens reached from other controls.
-  static readonly string[] Ids={"Home","Scaling","Library","Downloads","Music","Settings","Advanced","Saves","Preflight","Help","Setup"};
+  static readonly string[] Ids={"Home","Scaling","Library","Downloads","Music","Settings","Advanced","Saves","Preflight","Help","Setup","Gamepad"};
   public static string[] Screens {get{return (string[])Ids.Clone();}}
   public static bool IsScreen(string name){return name!=null&&Array.IndexOf(Ids,name)>=0;}
   // Settings is the page of game settings (developer, 2026-11-20); what it showed before (the feature catalog) is Advanced Settings.
-  public static string Heading(string name){return name=="Downloads"?"Updates":name=="Advanced"?"Advanced Settings":name;}
+  public static string Heading(string name){return name=="Downloads"?"Updates":name=="Advanced"?"Advanced Settings":name=="Gamepad"?"Gamepad buttons":name;}
   public static string NavLabel(string name){return name=="Downloads"?"Updates":name=="Advanced"?"Advanced Settings":name;}
   public static bool ShowsLibrary(string name){return name=="Library";}
   public static bool ShowsTransport(string name){return name=="Library"||name=="Music";}

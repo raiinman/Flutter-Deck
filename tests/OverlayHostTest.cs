@@ -550,5 +550,77 @@ public static class OverlayHostTest {
       OverlayNative.UnregisterHotKey(IntPtr.Zero,0x7004);
       DestroyWindow(gw2);
     }else Info("Ctrl+Alt+K was not free here; the dispose-in-keyboard-mode case was not exercised");
+
+    // live control of the game (proposed channel, 2026-11-22): the overlay only hands command lines to the launcher
+    {
+      var gw3=CreateWindowExW(0x08000080,Win32Probe.GameClass,Win32Probe.TitlePrefix+" (live control)",0x90000000u,GX,GY,GW,GH,IntPtr.Zero,IntPtr.Zero,IntPtr.Zero,IntPtr.Zero);
+      var sent=new List<string>();var lh=new OverlayHost();lh.GameCommand=delegate(string c){sent.Add(c);};lh.GameVolume=delegate{return 0.8;};lh.GameMuted=delegate{return false;};GameLiveState gs=new GameLiveState{Volume=80};lh.GameState=delegate{return gs;};
+      var lc=GameOverlay.Attach(pid,lh,new OverlaySettings{KeyboardMenu=false},Path.Combine(scratch,"live.txt"),new OverlayFeatures(new[]{OverlayLayout.LiveControl}),probe,false);
+      var rootLc=lc.Content;long tt=980000;probe.Foreground=true;
+      Action ensure=delegate{
+        if(!lc.Visible){probe.Y=GY+300;lc.Step(tt+=100);probe.Y=GY+2;lc.Step(tt+=100);lc.Step(tt+=300);}
+        if(lc.Mode==OverlayMode.Bar){Invoke(FindById<Button>(rootLc,"overlay-menu"));lc.Step(tt+=100);}
+      };
+      ensure();Check(lc.Visible,"live control: the bar opens");
+      var pb=FindById<Button>(rootLc,"overlay-pause");var fb=FindById<Button>(rootLc,"overlay-fullscreen");
+      Check(pb.IsEnabled&&fb.IsEnabled&&NameOf(pb)=="Pause","live control: Pause and Fullscreen are enabled when the game lists the feature");
+      var pauseGlyph=(System.Windows.Shapes.Path)pb.Tag;var glyphPause=pauseGlyph.Data;
+      Invoke(pb);Check(sent.Count==1&&sent[0]=="pause on"&&NameOf(pb)=="Resume"&&(string)pb.ToolTip=="Resume"&&!Object.ReferenceEquals(pauseGlyph.Data,glyphPause),"live control: Pause sends 'pause on' and the button becomes Resume (name, tooltip and play icon)");
+      Invoke(pb);Check(sent.Count==2&&sent[1]=="pause off"&&NameOf(pb)=="Pause"&&(string)pb.ToolTip=="Pause"&&Object.ReferenceEquals(pauseGlyph.Data,glyphPause),"live control: the second click sends 'pause off' and the pause icon returns");
+      Invoke(pb);ensure();lc.OpenSubmenu("Session");
+      Check(FindById<Button>(rootLc,"ses-resume").IsEnabled,"live control: Session > Resume game is enabled");
+      Invoke(FindById<Button>(rootLc,"ses-resume"));Check(sent[sent.Count-1]=="pause off"&&NameOf(pb)=="Pause","live control: Resume game sends 'pause off' and the button shows Pause again");
+      int before=sent.Count;ensure();lc.OpenSubmenu("Session");Invoke(FindById<Button>(rootLc,"ses-resume"));Check(sent.Count==before,"live control: Resume game while not paused sends nothing");
+      ensure();Invoke(FindById<Button>(rootLc,"overlay-fullscreen"));Check(sent[sent.Count-1]=="fullscreen toggle","live control: the Fullscreen button sends 'fullscreen toggle'");
+      ensure();lc.OpenSubmenu("View");Check(FindById<Button>(rootLc,"view-fullscreen").IsEnabled&&FindById<Button>(rootLc,"view-screenshot").IsEnabled,"live control: View > Fullscreen and Take screenshot are enabled");
+      Invoke(FindById<Button>(rootLc,"view-screenshot"));Check(sent[sent.Count-1]=="screenshot","live control: Take screenshot sends 'screenshot'");
+      ensure();lc.OpenSubmenu("View");Invoke(FindById<Button>(rootLc,"view-fullscreen"));Check(sent[sent.Count-1]=="fullscreen toggle","live control: View > Fullscreen sends 'fullscreen toggle'");
+      ensure();lc.OpenSubmenu("Audio");
+      Check(FindById<Button>(rootLc,"aud-game-mute").IsEnabled&&FindById<FrameworkElement>(rootLc,"aud-game-volume-bar")!=null,"live control: Audio has a working mute row and a volume bar");
+      Check(FindById<TextBlock>(rootLc,"aud-game-volume-value").Text=="80%","live control: the volume bar starts at the game's own 80 percent");
+      Invoke(FindById<Button>(rootLc,"aud-game-mute"));lc.Step(tt+=50);Check(sent[sent.Count-1]=="mute on"&&Ticked(rootLc,"aud-game-mute"),"live control: Mute sends 'mute on' and is ticked");
+      Invoke(FindById<Button>(rootLc,"aud-game-mute"));lc.Step(tt+=50);Check(sent[sent.Count-1]=="mute off"&&!Ticked(rootLc,"aud-game-mute"),"live control: the second click sends 'mute off' and clears the tick");
+      before=sent.Count;lc.SetBar("aud-game-volume",0.8);Check(sent.Count==before,"live control: the same volume sends nothing");
+      lc.SetBar("aud-game-volume",0.5);Check(sent[sent.Count-1]=="volume 50"&&sent.Count==before+1,"live control: the volume bar sends 'volume 50'");
+      lc.SetBar("aud-game-volume",0.504);lc.SetBar("aud-game-volume",0.5);Check(sent.Count==before+1,"live control: one line per whole percent, not one per mouse move");
+      lc.SetBar("aud-game-volume",7);Check(sent[sent.Count-1]=="volume 100","live control: a value over 1 is held at 100");
+      ensure();lc.OpenSubmenu("View");
+      Check(FindById<Button>(rootLc,"view-speed").IsEnabled&&!Ticked(rootLc,"view-speed"),"live control: View > Unlimited speed is enabled and starts unticked");
+      Invoke(FindById<Button>(rootLc,"view-speed"));lc.Step(tt+=50);Check(sent[sent.Count-1]=="speed unlimited"&&Ticked(rootLc,"view-speed"),"live control: Unlimited speed sends 'speed unlimited' and is ticked");
+      Invoke(FindById<Button>(rootLc,"view-speed"));lc.Step(tt+=50);Check(sent[sent.Count-1]=="speed normal"&&!Ticked(rootLc,"view-speed"),"live control: the second click sends 'speed normal' and clears the tick");
+      // what the game says about itself (its state file): the overlay follows it, and ignores it for a moment after its own command
+      ensure();tt+=3000;gs.Paused=true;gs.Muted=true;gs.Volume=35;lc.Step(tt);
+      Check(NameOf(pb)=="Resume"&&(string)pb.ToolTip=="Resume","state: the game paused itself, so the button shows Resume");
+      Check(Ticked(rootLc,"aud-game-mute")&&FindById<TextBlock>(rootLc,"aud-game-volume-value").Text=="35%","state: the game's own mute and volume are shown");
+      tt+=3000;lc.Step(tt);gs.Paused=false;lc.SetBar("aud-game-volume",0.6);gs.Volume=35;tt+=600;lc.Step(tt);
+      Check(FindById<TextBlock>(rootLc,"aud-game-volume-value").Text=="60%"&&NameOf(pb)=="Resume","state: right after the overlay's own command the old state is ignored, so a volume drag is not undone");
+      tt+=2000;lc.Step(tt);
+      Check(FindById<TextBlock>(rootLc,"aud-game-volume-value").Text=="35%"&&NameOf(pb)=="Pause","state: a moment later the game's own state wins again (Esc in the game ended the pause)");
+      gs.Unlimited=true;tt+=3000;lc.Step(tt);Check(Ticked(rootLc,"view-speed"),"state: the game runs at unlimited speed (its Tab key), so the row is ticked");gs.Unlimited=false;tt+=3000;lc.Step(tt);Check(!Ticked(rootLc,"view-speed"),"state: back to normal speed clears the tick");
+      gs.LastShot=@"C:\runs\game_shots\shot_f000100.bmp";tt+=600;lc.Step(tt);
+      if(lc.HotkeyRegistered)Check(lc.Note=="Screenshot saved: shot_f000100.bmp","state: a new screenshot is named in the menu note");
+      lc.Step(tt+=600);Check(lc.Note=="Screenshot saved: shot_f000100.bmp"||!lc.HotkeyRegistered,"state: the same screenshot is not announced twice");
+      lh.GameState=delegate{return null;};tt+=1200;lc.Step(tt);Check(NameOf(pb)=="Pause","state: no state file leaves the overlay as it was");
+      lc.Dispose();Pump();
+      // without the feature, or with no way to send, the controls stay disabled and send nothing
+      sent.Clear();
+      var ln=GameOverlay.Attach(pid,lh,new OverlaySettings{KeyboardMenu=false},Path.Combine(scratch,"live2.txt"),OverlayFeatures.None,probe,false);
+      Check(!FindById<Button>(ln.Content,"overlay-pause").IsEnabled&&!FindById<Button>(ln.Content,"overlay-fullscreen").IsEnabled&&sent.Count==0,"live control: a game that does not list the feature gets disabled Pause and Fullscreen");
+      ln.SetBar("aud-game-volume",0.3);Check(sent.Count==0,"live control: a game that does not list the feature gets no volume line, even if the bar is driven");
+      ln.Dispose();Pump();
+      // a game started muted, and odd start volumes
+      var mh=new OverlayHost();mh.GameCommand=delegate(string c){sent.Add(c);};mh.GameMuted=delegate{return true;};mh.GameVolume=delegate{return 1.5;};
+      var lm=GameOverlay.Attach(pid,mh,new OverlaySettings{KeyboardMenu=false},Path.Combine(scratch,"live4.txt"),new OverlayFeatures(new[]{OverlayLayout.LiveControl}),probe,false);
+      Check(Ticked(lm.Content,"aud-game-mute")&&FindById<TextBlock>(lm.Content,"aud-game-volume-value").Text=="100%","live control: a game started muted shows the tick, and a start volume over 1 shows 100%");
+      Invoke(FindById<Button>(lm.Content,"aud-game-mute"));Check(sent.Count==1&&sent[0]=="mute off","live control: the first click on a game started muted sends 'mute off'");
+      lm.Dispose();Pump();sent.Clear();
+      mh.GameVolume=delegate{return Double.NaN;};
+      var lv=GameOverlay.Attach(pid,mh,new OverlaySettings{KeyboardMenu=false},Path.Combine(scratch,"live5.txt"),new OverlayFeatures(new[]{OverlayLayout.LiveControl}),probe,false);
+      Check(FindById<TextBlock>(lv.Content,"aud-game-volume-value").Text=="100%","live control: a start volume that is not a number shows 100%, not nonsense");
+      lv.Dispose();Pump();
+      var lh3=new OverlayHost();var ld=GameOverlay.Attach(pid,lh3,new OverlaySettings{KeyboardMenu=false},Path.Combine(scratch,"live3.txt"),new OverlayFeatures(new[]{OverlayLayout.LiveControl}),probe,false);
+      Check(!FindById<Button>(ld.Content,"overlay-pause").IsEnabled,"live control: the feature without a way to send leaves Pause disabled");
+      ld.Dispose();Pump();DestroyWindow(gw3);
+    }
   }
 }

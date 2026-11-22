@@ -91,6 +91,9 @@ public sealed class Win32Probe : IGameProbe {
 }
 
 // What the launcher does when the player uses the overlay. Any member may be null: that control then does nothing.
+// What the game says it is doing (its .state file), handed over by the launcher. The overlay only shows it; it never reads the file itself.
+public sealed class GameLiveState { public bool Paused,Muted,Fullscreen,Unlimited;public int Volume=100;public string LastShot=""; }
+
 public sealed class OverlayHost {
   public Action<string> ApplyPicture;
   public Func<string> PictureStatus,PictureSelected;
@@ -117,6 +120,12 @@ public sealed class OverlayHost {
   public Func<IList<GameSetting>> GameSettings;  // the settings on offer now, with their current values
   public Func<string,int,string> SetGameSetting; // setting id, new value -> "" when it is kept, or a line saying why not
   public Func<bool> GameSettingsPending;         // true when the next start would differ from the running game
+  // Live control (proposed 2026-11-22): the overlay never talks to the game. It hands one command line to the launcher, which writes the game's control file.
+  // Lines: "pause on", "pause off", "fullscreen toggle", "screenshot", "volume 0-100", "mute on", "mute off". Leave GameCommand null and the controls stay disabled.
+  public Action<string> GameCommand;
+  public Func<double> GameVolume;                // the game's volume at its start, 0 to 1 (optional)
+  public Func<bool> GameMuted;                   // true when the game was started muted (optional)
+  public Func<GameLiveState> GameState;          // what the game reports now, or null when it has not (optional; the overlay asks about twice a second while it is shown)
 }
 
 static class OverlayArt {
@@ -155,6 +164,7 @@ public sealed class GameOverlay : IDisposable {
   PxRect lastUi,lastGame;PxRect[] monitors=new PxRect[0];
   bool shown,disposed,registered,keysActive,noActivate,hotkeyPending,musicShown;
   double scale=1,pillWidthDip=160;int errors;
+  bool paused,gameMuted,unlimited;double gameVol=1;int gameVolSent=-1;Button pauseButton;long lastSendAt=-100000,liveStateAt=-100000;string lastShot=null; // live control: what the overlay last asked of the game (the game has no state file yet)
   string hotkeyProblem="",keysNote="";
   Border editorBox;Button editorSave,editorDiscard;TextBlock editorStatus,editorWarning;bool editorOpen;string capturing;
   readonly Dictionary<string,TextBlock> keyText=new Dictionary<string,TextBlock>();
@@ -253,10 +263,11 @@ public sealed class GameOverlay : IDisposable {
       else{
         string title=id=="pause"?"Pause":id=="restart"?"Restart session":"Fullscreen";
         // Pause and fullscreen: no action until the game names a control (OverlayLayout.GameControls). Restart is the launcher's own.
-        Action click=id=="restart"&&host.RestartGame!=null?(Action)OnRestart:null;
+        Action click=id=="restart"&&host.RestartGame!=null?(Action)OnRestart:id=="pause"&&LiveOn("pause")?(Action)OnPause:id=="fullscreen"&&LiveOn("fullscreen")?(Action)OnFullscreen:null;
         b=StateIcon("overlay-"+id,title,id,click);
         if(click==null)b.ToolTip=title+" (not available yet)";
-        else{restartButton=b;}
+        else if(id=="restart")restartButton=b;
+        else if(id=="pause")pauseButton=b;
       }
       if(!first)b.Margin=new Thickness(4,0,0,0);
       first=false;row.Children.Add(b);pillList.Add(b);
@@ -275,7 +286,8 @@ public sealed class GameOverlay : IDisposable {
       mainStack.Children.Add(MainRow(name));
       var rows=new StackPanel{Orientation=Orientation.Vertical};
       foreach(MenuItemSpec spec in OverlayMenus.Items(name)){
-        if(spec.Id=="aud-volume"&&host.MusicVolume!=null&&host.SetMusicVolume!=null)rows.Children.Add(VolumeRow(spec));
+        if(spec.Id=="aud-game-volume"&&LiveOn("volume"))rows.Children.Add(VolumeRow(spec));
+        else if(spec.Id=="aud-volume"&&host.MusicVolume!=null&&host.SetMusicVolume!=null)rows.Children.Add(VolumeRow(spec));
         else if(spec.Id=="view-scale"&&host.UiScale!=null&&host.StepUiScale!=null)rows.Children.Add(ScaleRow(spec));
         else rows.Children.Add(ItemRow(spec,actions));
       }
@@ -329,6 +341,8 @@ public sealed class GameOverlay : IDisposable {
     var p=new HwndSourceParameters("FlutterDeckOverlayKeys"){Width=0,Height=0,PositionX=0,PositionY=0,ParentWindow=new IntPtr(-3),WindowStyle=0}; // message-only: it only receives the hotkey
     hotkeySource=new HwndSource(p);hotkeySource.AddHook(HotkeyHook);
     RegisterHotkey();
+    try{if(host.GameVolume!=null){double v0=host.GameVolume();gameVol=Double.IsNaN(v0)?1:Math.Max(0,Math.Min(1,v0));}if(host.GameMuted!=null)gameMuted=host.GameMuted();}catch(Exception){}
+    gameVolSent=(int)Math.Round(gameVol*100);
     Refresh();
     pillWidthDip=PillW;
   }
@@ -344,6 +358,11 @@ public sealed class GameOverlay : IDisposable {
     a["overlay-hover"]=ToggleHover;
     a["overlay-keyboard"]=ToggleKeyboardMenu;
     if(host.RestartGame!=null)a["ses-restart"]=OnRestart;
+    if(LiveOn("pause"))a["ses-resume"]=OnResume;
+    if(LiveOn("fullscreen"))a["view-fullscreen"]=OnFullscreen;
+    if(LiveOn("screenshot"))a["view-screenshot"]=delegate{Send("screenshot");};
+    if(LiveOn("speed"))a["view-speed"]=OnSpeed;
+    if(LiveOn("volume"))a["aud-game-mute"]=OnGameMute;
     if(host.ShowLauncher!=null){a["lib-return"]=delegate{host.ShowLauncher("Home");};a["help-setup"]=delegate{host.ShowLauncher("Setup");};a["help-about"]=delegate{host.ShowLauncher("Help");};}
     return a;
   }
@@ -492,15 +511,47 @@ public sealed class GameOverlay : IDisposable {
   public void SetBar(string id,double value){
     value=Math.Max(0,Math.Min(1,Double.IsNaN(value)?0:value));
     try{if(id=="aud-volume"&&host.SetMusicVolume!=null)host.SetMusicVolume(value);}catch(Exception){}
+    if(id=="aud-game-volume"&&LiveOn("volume")){gameVol=value;int pct=(int)Math.Round(value*100);if(pct!=gameVolSent){gameVolSent=pct;Send("volume "+pct);}} // one line per whole percent, not one per mouse move
     RefreshBars();
   }
   void RefreshBars(){
     try{
       System.Windows.Shapes.Rectangle f;TextBlock t;
       if(host.MusicVolume!=null&&barFill.TryGetValue("aud-volume",out f)){double v=Math.Max(0,Math.Min(1,host.MusicVolume()));f.Width=BarW*v;if(barText.TryGetValue("aud-volume",out t))t.Text=(int)Math.Round(v*100)+"%";}
+      if(barFill.TryGetValue("aud-game-volume",out f)){f.Width=BarW*gameVol;if(barText.TryGetValue("aud-game-volume",out t))t.Text=(int)Math.Round(gameVol*100)+"%";}
       if(host.UiScale!=null&&barText.TryGetValue("view-scale",out t))t.Text=(int)Math.Round(host.UiScale()*100)+"%";
     }catch(Exception){}
   }
+  // ---- live control of the game (proposed channel; the launcher writes the control file, see OverlayHost.GameCommand) ----
+  bool LiveOn(string control){return host.GameCommand!=null&&OverlayLayout.Offered(control,features);}
+  void Send(string line){lastSendAt=lastNow;try{if(host.GameCommand!=null)host.GameCommand(line);}catch(Exception){}}
+  void SetPaused(bool on){
+    if(paused==on)return;
+    paused=on;Send(on?"pause on":"pause off");ShowPauseLook();
+  }
+  void ShowPauseLook(){
+    if(pauseButton!=null){var path=pauseButton.Tag as System.Windows.Shapes.Path;if(path!=null)SetGlyph(path,paused?"play":"pause");pauseButton.ToolTip=paused?"Resume":"Pause";AutomationProperties.SetName(pauseButton,paused?"Resume":"Pause");}
+  }
+  // The game's own account of itself. For 1.5 seconds after the overlay sent a command the old state is ignored (the game has not answered yet), so a click or a drag is not undone.
+  void PollGameState(long now){
+    GameLiveState st=null;try{st=host.GameState();}catch(Exception){}
+    if(st==null)return;
+    if(now-lastSendAt>1500){
+      if(paused!=st.Paused){paused=st.Paused;ShowPauseLook();}
+      if(gameMuted!=st.Muted){gameMuted=st.Muted;SetTick("aud-game-mute",gameMuted);}
+      if(unlimited!=st.Unlimited){unlimited=st.Unlimited;SetTick("view-speed",unlimited);}
+      int v=Math.Max(0,Math.Min(100,st.Volume));
+      if(v!=gameVolSent){gameVol=v/100.0;gameVolSent=v;RefreshBars();}
+    }
+    string shot=st.LastShot??"";
+    if(lastShot==null)lastShot=shot;
+    else if(shot!=lastShot){lastShot=shot;if(shot.Length>0){keysNote="Screenshot saved: "+System.IO.Path.GetFileName(shot);Refresh();}}
+  }
+  void OnPause(){SetPaused(!paused);}
+  void OnResume(){if(paused)SetPaused(false);}
+  void OnFullscreen(){Send("fullscreen toggle");}
+  void OnSpeed(){unlimited=!unlimited;Send(unlimited?"speed unlimited":"speed normal");SetTick("view-speed",unlimited);}
+  void OnGameMute(){gameMuted=!gameMuted;Send(gameMuted?"mute on":"mute off");SetTick("aud-game-mute",gameMuted);}
   void OnRestart(){
     long now=lastNow;
     if(now<restartArmedUntil){restartArmedUntil=0;SetRestartArmed(false);if(host.RestartGame!=null)host.RestartGame();state.Close();Apply(lastGame,now);return;}
@@ -933,6 +984,8 @@ public sealed class GameOverlay : IDisposable {
     }
     if(now<=returnUntil)o.GameForeground=true; // Windows may take a moment to put the game in front after the key
     state.Update(o,now);if(state.Mode==OverlayMode.Hidden)launcherPicker=false;
+    if(state.Mode==OverlayMode.Hidden)liveStateAt=-100000;
+    else if(host.GameState!=null&&LiveOn("pause")&&now-liveStateAt>=500){liveStateAt=now;PollGameState(now);}
     if(!String.IsNullOrEmpty(tracePath)){
       if(game!=traceGame||!rect.SameAs(traceRect)){traceGame=game;traceRect=rect;Trace("game window 0x"+((long)game).ToString("X")+" picture "+rect+" fullScreen="+o.FullScreen);}
       if(o.GameFound&&o.GameForeground!=traceFg){traceFg=o.GameForeground;Trace("game in front="+traceFg+(traceFg?"":" (foreground is "+ForegroundInfo()+")"));}
@@ -996,6 +1049,7 @@ public sealed class GameOverlay : IDisposable {
     rowText["overlay-hotkey"].Text=keysActive?"Overlay key: press a combination...":"Overlay key: "+settings.HotkeyText+"  (change)";
     SetTick("overlay-fullscreen-only",FullScreenOnlyWorks&&settings.FullScreenOnly);SetTick("overlay-hover",settings.HoverBar);SetTick("overlay-keyboard",settings.KeyboardMenu);SetTick("aud-play",musicShown);
     {bool muted=false;try{muted=host.MusicMuted!=null&&host.MusicMuted();}catch(Exception){}SetTick("aud-mute",muted);}
+    SetTick("aud-game-mute",gameMuted);SetTick("view-speed",unlimited);
     RefreshBars();
     if(host.ApplyPicture!=null){
       string selected=host.PictureSelected==null?"":host.PictureSelected();

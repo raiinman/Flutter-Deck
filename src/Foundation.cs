@@ -96,7 +96,7 @@ public sealed class SafeSessionLog {
       case "setup-save-failed":case "preferences-save-failed":case "preferences-reset":
       case "references-checked":case "reference-check-failed":
       case "update-available":case "update-check-failed":case "update-installed":case "update-install-failed":case "update-rolled-back":
-      case "game-started":case "game-ended":case "game-ended-with-error":case "multiplayer-host":case "multiplayer-join":case "game-build-started":case "game-build-ready":case "game-build-stopped":case "game-build-cancelled":case "game-files-opened":case "keys-saved":case "keys-save-failed":case "card-backed-up":case "card-backup-failed":case "card-imported":case "card-restored":case "card-restore-refused":case "card-restore-failed":break;
+      case "game-started":case "game-ended":case "game-ended-with-error":case "multiplayer-host":case "multiplayer-join":case "game-build-started":case "game-build-ready":case "game-build-stopped":case "game-build-cancelled":case "game-files-opened":case "keys-saved":case "keys-save-failed":case "gamepad-saved":case "gamepad-save-failed":case "card-backed-up":case "card-backup-failed":case "card-imported":case "card-restored":case "card-restore-refused":case "card-restore-failed":break;
       default:return;
     }
     if(entries.Count==50)entries.Dequeue();entries.Enqueue(code);
