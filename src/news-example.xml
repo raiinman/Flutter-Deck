@@ -1,0 +1,4 @@
+<news version="1">
+  <item id="home-preview-v1" kind="changelog" date="2026-11-15T00:00:00Z"><title>Welcome aboard Flutter Deck</title><body>Bundled build notes: native Home, changelog and announcement reader; local music transport; independent experimental scaling; local setup references. Game runtime and automatic software updates remain disconnected.</body></item>
+  <item id="news-rollout-v1" kind="announcement" date="2026-11-15T00:00:00Z"><title>Owner notices, without a launcher rebuild</title><body>Once an approved public feed is configured and published, upgraded copies can fetch owner posts on startup, every 15 minutes while open, or on Refresh. This is not push while closed. Older copies must first upgrade. No live publisher is connected in this package.</body></item>
+</news>

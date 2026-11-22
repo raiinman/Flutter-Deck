@@ -1,0 +1,303 @@
+{
+  "size": [
+    1312,
+    1199
+  ],
+  "columns": [
+    "pause",
+    "restart",
+    "stop",
+    "fullscreen",
+    "menu"
+  ],
+  "rows": [
+    "normal",
+    "hover",
+    "pressed",
+    "disabled"
+  ],
+  "generated": true,
+  "note": "Approximate equal-cell mapping. Generated frames may differ slightly. Faint alpha fringe can extend beyond visible bounds. No app behavior implemented.",
+  "sprites": {
+    "pause-normal": {
+      "cell": [
+        0,
+        0,
+        262,
+        300
+      ],
+      "visible_alpha_bounds": [
+        73,
+        112,
+        248,
+        286
+      ]
+    },
+    "restart-normal": {
+      "cell": [
+        262,
+        0,
+        525,
+        300
+      ],
+      "visible_alpha_bounds": [
+        322,
+        112,
+        495,
+        286
+      ]
+    },
+    "stop-normal": {
+      "cell": [
+        525,
+        0,
+        787,
+        300
+      ],
+      "visible_alpha_bounds": [
+        569,
+        112,
+        743,
+        286
+      ]
+    },
+    "fullscreen-normal": {
+      "cell": [
+        787,
+        0,
+        1050,
+        300
+      ],
+      "visible_alpha_bounds": [
+        817,
+        112,
+        991,
+        286
+      ]
+    },
+    "menu-normal": {
+      "cell": [
+        1050,
+        0,
+        1312,
+        300
+      ],
+      "visible_alpha_bounds": [
+        1064,
+        112,
+        1239,
+        286
+      ]
+    },
+    "pause-hover": {
+      "cell": [
+        0,
+        300,
+        262,
+        600
+      ],
+      "visible_alpha_bounds": [
+        73,
+        376,
+        248,
+        551
+      ]
+    },
+    "restart-hover": {
+      "cell": [
+        262,
+        300,
+        525,
+        600
+      ],
+      "visible_alpha_bounds": [
+        322,
+        376,
+        496,
+        551
+      ]
+    },
+    "stop-hover": {
+      "cell": [
+        525,
+        300,
+        787,
+        600
+      ],
+      "visible_alpha_bounds": [
+        569,
+        377,
+        744,
+        551
+      ]
+    },
+    "fullscreen-hover": {
+      "cell": [
+        787,
+        300,
+        1050,
+        600
+      ],
+      "visible_alpha_bounds": [
+        817,
+        377,
+        991,
+        551
+      ]
+    },
+    "menu-hover": {
+      "cell": [
+        1050,
+        300,
+        1312,
+        600
+      ],
+      "visible_alpha_bounds": [
+        1064,
+        377,
+        1239,
+        551
+      ]
+    },
+    "pause-pressed": {
+      "cell": [
+        0,
+        600,
+        262,
+        899
+      ],
+      "visible_alpha_bounds": [
+        73,
+        643,
+        248,
+        818
+      ]
+    },
+    "restart-pressed": {
+      "cell": [
+        262,
+        600,
+        525,
+        899
+      ],
+      "visible_alpha_bounds": [
+        321,
+        643,
+        495,
+        818
+      ]
+    },
+    "stop-pressed": {
+      "cell": [
+        525,
+        600,
+        787,
+        899
+      ],
+      "visible_alpha_bounds": [
+        569,
+        643,
+        743,
+        818
+      ]
+    },
+    "fullscreen-pressed": {
+      "cell": [
+        787,
+        600,
+        1050,
+        899
+      ],
+      "visible_alpha_bounds": [
+        817,
+        643,
+        991,
+        818
+      ]
+    },
+    "menu-pressed": {
+      "cell": [
+        1050,
+        600,
+        1312,
+        899
+      ],
+      "visible_alpha_bounds": [
+        1064,
+        643,
+        1239,
+        818
+      ]
+    },
+    "pause-disabled": {
+      "cell": [
+        0,
+        899,
+        262,
+        1199
+      ],
+      "visible_alpha_bounds": [
+        73,
+        910,
+        248,
+        1087
+      ]
+    },
+    "restart-disabled": {
+      "cell": [
+        262,
+        899,
+        525,
+        1199
+      ],
+      "visible_alpha_bounds": [
+        322,
+        910,
+        496,
+        1087
+      ]
+    },
+    "stop-disabled": {
+      "cell": [
+        525,
+        899,
+        787,
+        1199
+      ],
+      "visible_alpha_bounds": [
+        569,
+        910,
+        743,
+        1087
+      ]
+    },
+    "fullscreen-disabled": {
+      "cell": [
+        787,
+        899,
+        1050,
+        1199
+      ],
+      "visible_alpha_bounds": [
+        817,
+        910,
+        991,
+        1087
+      ]
+    },
+    "menu-disabled": {
+      "cell": [
+        1050,
+        899,
+        1312,
+        1199
+      ],
+      "visible_alpha_bounds": [
+        1064,
+        910,
+        1239,
+        1086
+      ]
+    }
+  }
+}

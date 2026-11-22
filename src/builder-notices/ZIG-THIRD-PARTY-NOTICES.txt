@@ -1,0 +1,38 @@
+Zig 0.17.1: other licences inside this package
+===============================================
+
+This folder is the official Zig 0.17.1 package for x86_64 Windows from ziglang.org
+(zig-x86_64-windows-0.17.1.zip, SHA-256 b03f477a1943673e02aca0f570e8030dffd536ce1f45cbc4d3326ec31159562e),
+unpacked unchanged. Flutter Deck added only this file. The licence files below are the package's own, kept where
+the package put it; the list names every licence file found in the package on 2026-11-20.
+
+LICENSE                              Zig itself: MIT licence (Expat form), copyright Zig contributors.
+
+zig.exe                              According to README.md in this folder, the Zig project builds zig.exe with
+                                     the LLVM, Clang and LLD libraries. They are under the
+                                     Apache License v2.0 with LLVM Exceptions. Its full text is in
+                                     lib\libcxx\LICENSE.TXT.
+lib\include                          C headers from Clang: mostly Apache License v2.0 with LLVM Exceptions
+                                     (full text in lib\libcxx\LICENSE.TXT); a few headers carry their own
+                                     MIT-style notice at the top instead.
+lib\libcxx\LICENSE.TXT               libc++ (LLVM project): Apache License v2.0 with LLVM Exceptions.
+lib\libcxxabi\LICENSE.TXT            libc++abi (LLVM project): same licence.
+lib\libunwind\LICENSE.TXT            libunwind (LLVM project): same licence.
+lib\libtsan\LICENSE.TXT              ThreadSanitizer run-time (LLVM project): same licence.
+lib\libc\mingw\COPYING               mingw-w64 (the Windows C library parts used to build the games):
+                                     Zope Public License 2.1, except parts marked Public Domain, BSD or LGPL.
+                                     The C headers in lib\libc\include\any-windows-any come from mingw-w64.
+lib\libc\musl\COPYRIGHT              musl C library: MIT licence and the notices in that file.
+lib\libc\glibc\LICENSES              GNU C Library: the copying notices in that file.
+lib\libc\freebsd\COPYRIGHT           FreeBSD C library parts: the terms in that file.
+lib\libc\wasi\LICENSE                wasi-libc: Apache 2.0 with LLVM Exceptions, Apache 2.0 and MIT (the three
+                                     texts are beside it: LICENSE-APACHE-LLVM, LICENSE-APACHE, LICENSE-MIT).
+lib\libc\wasi\libc-bottom-half\cloudlibc\LICENSE   cloudlibc: the BSD-style terms in that file.
+lib\libc\wasi\fts\musl-fts\COPYING   musl-fts: the BSD-style terms in that file.
+lib\libc\wasi\libc-top-half\musl\COPYRIGHT   musl parts of wasi-libc: MIT licence and the notices in that file.
+lib\libc\include\generic-freebsd\sys\copyright.h   FreeBSD headers: BSD-2-Clause, as stated in that file.
+
+Many source and header files under lib\ also carry their own notices at the top. They are unchanged.
+
+Flutter Deck uses Zig only on the player's PC, as a C compiler, to build the player's own copy of a game.
+The program it builds stays on that PC and is never passed on.

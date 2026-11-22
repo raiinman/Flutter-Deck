@@ -1,0 +1,4 @@
+name=Clean
+description=Smooth edges with a light sharpen
+filter=bicubic-cas
+sharpness=20

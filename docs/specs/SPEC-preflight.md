@@ -1,0 +1,7 @@
+# Spec: Local preflight and truthful capabilities
+Objective: reduce setup confusion with non-destructive per-game preflight and clear launcher/build/runtime identity. No game payload hashing, game launch, controller probing, networking, setup mutation or public publication.
+Scope: reuse saved references and existing bounded CUE/BIOS metadata checks; provide separate game and BIOS results with repair links. Selected MML target is user-assigned, not detected identity. Region/revision and native runtime remain unverified. Display/controller options are not applied to games.
+Structure: Preflight.cs pure result logic, PreflightPureTest.cs isolated synthetic files, Program.cs native Preflight screen, FeatureCatalog.cs corrected implemented setup/music entries. Build label in Preflight is a launcher UI revision, never a game build.
+Commands: powershell -NoProfile -File .\check-preflight.ps1; powershell -NoProfile -File .\build.ps1. Normal invocation first; any required bypass needs fresh approval.
+Acceptance: empty/missing/invalid/valid/exception states distinguished with actionable advice, no private path in result text; checks do not change references; specific checked time; Play still disabled; setup/music catalog route to real tools instead of mock choices.
+Always preserve files and verify helpers. Ask before modifying games, real display/input settings, or security policy. Never invent game compatibility or a native boot.

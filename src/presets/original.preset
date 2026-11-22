@@ -1,0 +1,5 @@
+# The game's own look: whole-number enlargement, no smoothing.
+name=Original
+description=Sharp pixels, enlarged by a whole number
+filter=integer
+sharpness=0

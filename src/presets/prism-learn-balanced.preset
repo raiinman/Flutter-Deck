@@ -1,0 +1,4 @@
+name=Learn Balanced 2x
+description=Keep dark sprite outlines crisp with the balanced learned scaler.
+filter=prism-learn-balanced
+sharpness=0

@@ -1,0 +1,83 @@
+Flutter Deck build tools: licences and notices
+==============================================
+
+This folder ("builder") holds what Flutter Deck needs to build a game from the player's own disc:
+three builder kits, Python and Zig. No game files, BIOS files, game art or game audio are in it.
+
+  kit\      the builder kit for Mega Man Legends
+  kit2\     the builder kit for Mega Man Legends 2
+  kit3\     the builder kit for The Misadventures of Tron Bonne
+  python\   Python 3.15.2, the embeddable package for Windows 64-bit from python.org, unchanged
+  zig\      Zig 0.17.1 for x86_64 Windows from ziglang.org, unchanged (one file added: THIRD-PARTY-NOTICES.txt)
+
+1. The builder kits
+-------------------
+The kits' own files are under the MIT licence below (the same licence as Flutter Deck).
+
+MIT License
+
+Copyright (c) 2026 Dead Signal Interactive
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+One table in the Mega Man Legends kit (kit\runtime-core\rtc_mdec_ac.h, 111 variable-length codes of the
+PlayStation video format) was generated from the document "The PlayStation 1 Video (STR) Format",
+version 1.20, by Michael Sabin (github.com/m35/jpsxdec, file jpsxdec/PlayStation1_STR_format.txt).
+That document is under the MIT licence; its text, copied from the document:
+
+Copyright (c) 2008-2023 Michael Sabin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this file (the "Document"), to deal in the Document without restriction,
+including without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Document, and to permit
+persons to whom the Document is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Document.
+
+THE DOCUMENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE DOCUMENT OR THE USE OR OTHER DEALINGS IN
+THE DOCUMENT.
+
+Each kit also holds its own THIRD-PARTY-NOTICES.txt.
+
+2. Python
+---------
+python\LICENSE.txt is the licence file of the official package, unchanged: the Python Software Foundation
+License Version 2, the additional conditions for the Windows binary build (Microsoft redistributable files),
+and notices for some of the libraries packed with it (bzip2, libffi, Zstandard, Tcl/Tk and others).
+Flutter Deck adds python\THIRD-PARTY-NOTICES.txt with the notices LICENSE.txt does not hold: the Python
+documentation's list of incorporated software, and expat, mpdecimal, SQLite, xz, zlib-ng, libtommath and
+HACL*, each copied unchanged from the source file it names.
+
+3. Zig
+------
+zig\LICENSE is the licence of Zig (MIT licence, Expat form). zig\THIRD-PARTY-NOTICES.txt lists the other
+licence files that come inside the Zig package.
+
+4. Note on the kit's own notice
+--------------------------------
+kit\THIRD-PARTY-NOTICES.txt says the MIT text of the PlayStation video document will be added "here". The kit's
+files are pinned and cannot change, so that text is in this file instead (section 1).

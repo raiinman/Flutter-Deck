@@ -1,0 +1,4 @@
+name=Smooth
+description=Soft, blended pixels
+filter=bilinear
+sharpness=0

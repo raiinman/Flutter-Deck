@@ -1,0 +1,5 @@
+FlutterDeck.exe
+*.zip
+*.bundle
+.dream-loop/
+CLAUDE_HANDOFF.md

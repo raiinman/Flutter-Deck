@@ -1,0 +1,4 @@
+name=Sharp
+description=Crisp detail, contrast-adaptive sharpening
+filter=cas
+sharpness=70
