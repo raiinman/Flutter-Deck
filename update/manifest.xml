@@ -1,0 +1,6 @@
+<update schema='1' product='flutterdeck' channel='stable' platform='win-x64'>
+<version>0.4.0</version>
+<sequence>2</sequence>
+<file name='FlutterDeck.exe' length='3998208' sha256='FFD3E867FFB35D73873F77D83CF406645EF04D476C9C061058C6A75792166D79' url='https://github.com/raiinman/Flutter-Deck/releases/download/v0.4.0/FlutterDeck.exe'/>
+<notes>Flutter Deck 0.4.0 Beta: the first public beta. Launches Mega Man Legends, Mega Man Legends 2 and The Misadventures of Tron Bonne, built from your own discs.</notes>
+</update>
