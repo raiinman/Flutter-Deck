@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="#what-it-does">What it does</a> ·
-  <a href="#how-it-works">How it works</a> ·
+  <a href="#how-to-play">How to play</a> ·
   <a href="#which-discs-you-need">Discs</a> ·
   <a href="#status">Status</a> ·
   <a href="#build-it-yourself">Build it yourself</a> ·
@@ -45,11 +45,12 @@ It never contains the game. Every player builds their own copy from their own di
 
 Every feature above is built and tested. Work continues on all of them.
 
-## How it works
+## How to play
 
-1. **Point it at your disc.** Flutter Deck finds the disc image of your game (Mega Man Legends, Mega Man Legends 2 or The Misadventures of Tron Bonne) in a folder you choose. It checks the files and keeps only a reference to them.
-2. **Build your game.** The launcher builds the game from your disc, on your PC. The finished game program stays on your PC and never goes into this repository or into a release.
-3. **Play.** Press Play. Change the picture, the keys and the volume while you play, or invite a friend.
+1. **Download Flutter Deck.** Open the [Releases page](https://github.com/raiinman/Flutter-Deck/releases) and download `FlutterDeckSetup-0.4.0.exe`. Run it and follow the page: it installs for you only and does not ask for administrator rights. It carries everything the launcher needs, so there is nothing else to install. Prefer no installer? Download `FlutterDeck-0.4.0-win-x64.zip` instead, unzip it anywhere and run `FlutterDeck.exe`.
+2. **Point it at your disc.** Flutter Deck finds the disc image of your game (Mega Man Legends, Mega Man Legends 2 or The Misadventures of Tron Bonne) in a folder you choose. It checks the files and keeps only a reference to them.
+3. **Build your game.** The launcher builds the game from your disc, on your PC. The finished game program stays on your PC and never goes into this repository or into a release.
+4. **Play.** Press Play. Change the picture, the keys and the volume while you play, or invite a friend.
 
 ## Which discs you need
 
