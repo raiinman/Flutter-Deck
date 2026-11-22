@@ -14,6 +14,7 @@
 <p align="center">
   <a href="#what-it-does">What it does</a> ·
   <a href="#how-it-works">How it works</a> ·
+  <a href="#which-discs-you-need">Discs</a> ·
   <a href="#status">Status</a> ·
   <a href="#build-it-yourself">Build it yourself</a> ·
   <a href="#documentation">Documentation</a> ·
@@ -49,6 +50,21 @@ Every feature above is built and tested. Work continues on all of them.
 1. **Point it at your disc.** Flutter Deck finds the disc image of your game (Mega Man Legends, Mega Man Legends 2 or The Misadventures of Tron Bonne) in a folder you choose. It checks the files and keeps only a reference to them.
 2. **Build your game.** The launcher builds the game from your disc, on your PC. The finished game program stays on your PC and never goes into this repository or into a release.
 3. **Play.** Press Play. Change the picture, the keys and the volume while you play, or invite a friend.
+
+## Which discs you need
+
+You need your own copy of each game you want to play: the **US (NTSC-U)** release, as a disc image. Other regions are not supported.
+
+| Game | Disc code | File Flutter Deck reads from the disc |
+| --- | --- | --- |
+| Mega Man Legends | SLUS-00603 | `ROCK_NEO.EXE` |
+| Mega Man Legends 2 | SLUS-01140 | `SLUS_011.40` |
+| The Misadventures of Tron Bonne | SLUS-00896 | `TRON.EXE` |
+
+- Use a **CUE** disc image: a `.cue` file with its `.bin` data beside it. Flutter Deck does not make the image for you.
+- Flutter Deck looks in a folder you choose, and up to three folders below it. It recognises a game by the file inside the disc, not by the file name.
+- It only remembers where your disc image is. It never copies the disc.
+- Building a game takes about 2 to 60 minutes and up to about 2 GB of free space, depending on the game and your PC.
 
 ## Status
 
