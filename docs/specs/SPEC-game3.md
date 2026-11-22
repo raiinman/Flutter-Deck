@@ -1,6 +1,6 @@
 # Game 3: The Misadventures of Tron Bonne
 
-Status, 2026-11-19: in the launcher source. The developer has not played this game yet, and no Play was pressed for it.
+Status, 2026-11-19: in the launcher source. In the launcher it is labelled features coming soon: saving, the sound and the opening movie are not yet proven.
 
 ## Background
 

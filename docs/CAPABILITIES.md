@@ -6,7 +6,7 @@
 - Experimental: independent DWM/GDI scaler; no live game compatibility or performance claim.
 - Proposed: 82 catalog entries covering engine controls, graphics, saves, mods, gameplay and services. Selections are in-memory previews, not applied settings.
 - Two catalog entries route to real Setup and Music instead of fake selectors.
-- Implemented, not yet started for real from the launcher: Play for Mega Man Legends 1 starts the user's own native game program per the game side's contract, with window size, sound-off and a launcher-owned key map and memory card (SPEC-play.md). Tested with a stand-in program only. Mega Man Legends 2 has no native program.
+- Implemented: Play for Mega Man Legends 1, Mega Man Legends 2 and The Misadventures of Tron Bonne starts the user's own native game program per the game side's contract, with window size, sound-off and a launcher-owned key map and memory card (SPEC-play.md, SPEC-game3.md). Legends 1 has been played from the launcher; Legends 2 and Tron Bonne are labelled features coming soon.
 - Game identity/region/revision detection, controller remapping, volume, filters, full screen and game updates are not implemented/verified.
 
 Preflight checks only existing local references and bounded metadata. It does not hash payloads, repair files or prove a native boot. User files and setup data are not included in packages.

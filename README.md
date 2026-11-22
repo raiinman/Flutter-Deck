@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/images/readme-header.png" alt="Flutter Deck: a launcher for Mega Man Legends, built from your own disc" width="100%"></p>
+<p align="center"><img src="docs/images/readme-header.png" alt="Flutter Deck: a launcher for Mega Man Legends 1, 2 and Tron Bonne, built from your own disc" width="100%"></p>
 
 <p align="center">
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc%2BPHBhdGggZmlsbD0nd2hpdGUnIGQ9J00xIDMuNmw5LjItMS4zdjguOUgxek0xMS4zIDIuMUwyMyAuNXYxMC43SDExLjN6TTEgMTIuM2g5LjJ2OC45TDEgMTkuOXpNMTEuMyAxMi4zSDIzdjEwLjdsLTExLjctMS42eicvPjwvc3ZnPg%3D%3D">
@@ -9,7 +9,7 @@
   <img alt="No game files included" src="https://img.shields.io/badge/Game%20files-none%20included-brightgreen">
 </p>
 
-<h3 align="center">Launch Mega Man Legends from your own disc.<br>One program. Nothing else to install.</h3>
+<h3 align="center">Launch Mega Man Legends 1, 2 and Tron Bonne from your own disc.<br>One program. Nothing else to install.</h3>
 
 <p align="center">
   <a href="#what-it-does">What it does</a> ·
@@ -22,7 +22,7 @@
 
 ---
 
-Flutter Deck is a free, unofficial launcher for **Mega Man Legends** and **Mega Man Legends 2** on Windows. It lives on a ship deck. You point it at the disc image you already own, and it takes care of the rest: your library, your picture settings, your saves, your music and your friends.
+Flutter Deck is a free, unofficial launcher for **Mega Man Legends**, **Mega Man Legends 2** and **The Misadventures of Tron Bonne** on Windows. It lives on a ship deck. You point it at the disc image you already own, and it takes care of the rest: your library, your picture settings, your saves, your music and your friends.
 
 It never contains the game. Every player builds their own copy from their own disc, on their own PC.
 
@@ -30,7 +30,7 @@ It never contains the game. Every player builds their own copy from their own di
 
 | | Feature | What you get | State |
 | :-: | --- | --- | --- |
-| 🚀 | **Play** | Starts Mega Man Legends 1 and 2 from your own game program, after readiness checks. | ✅ Built and tested. Checked in play (Legends 1) |
+| 🚀 | **Play** | Starts Mega Man Legends 1, Mega Man Legends 2 and The Misadventures of Tron Bonne from your own game program, after readiness checks. | ✅ Built and tested. Checked in play (Legends 1). Games 2 and 3: features coming soon |
 | 📚 | **Library** | A grid of your games. Covers can come from your own disc code (off until you turn them on). | ✅ Built and tested |
 | 🛠️ | **Build my game** | One button builds the game from your disc on your PC, with progress and plain error messages. | ✅ Built and tested |
 | 👥 | **Play with a friend** | Host or join with an invite code. Direct connection, no server, and help with your router. | ✅ Built and tested |
@@ -46,7 +46,7 @@ Every feature above is built and tested. Work continues on all of them.
 
 ## How it works
 
-1. **Point it at your disc.** Flutter Deck finds your Mega Man Legends disc image in a folder you choose. It checks the files and keeps only a reference to them.
+1. **Point it at your disc.** Flutter Deck finds the disc image of your game (Mega Man Legends, Mega Man Legends 2 or The Misadventures of Tron Bonne) in a folder you choose. It checks the files and keeps only a reference to them.
 2. **Build your game.** The launcher builds the game from your disc, on your PC. The finished game program stays on your PC and never goes into this repository or into a release.
 3. **Play.** Press Play. Change the picture, the keys and the volume while you play, or invite a friend.
 
@@ -78,6 +78,7 @@ powershell -NoProfile -File .\scripts\check-runtime.ps1
 | --- | --- |
 | Playing the game | [SPEC-play.md](docs/specs/SPEC-play.md) |
 | Building the game from your disc | [SPEC-builder.md](docs/specs/SPEC-builder.md) |
+| The Misadventures of Tron Bonne (game 3) | [SPEC-game3.md](docs/specs/SPEC-game3.md) |
 | Playing with a friend | [SPEC-multiplayer.md](docs/specs/SPEC-multiplayer.md) |
 | The in-game overlay | [SPEC-overlay.md](docs/specs/SPEC-overlay.md) |
 | Picture presets and DSI Prism | [SPEC-presets.md](docs/specs/SPEC-presets.md) |
@@ -89,7 +90,7 @@ powershell -NoProfile -File .\scripts\check-runtime.ps1
 
 ## Legal
 
-Flutter Deck is an **unofficial fan project**. It is not affiliated with, endorsed by or sponsored by Capcom. Mega Man, Mega Man Legends and Rockman DASH are trademarks or copyrights of Capcom Co., Ltd.
+Flutter Deck is an **unofficial fan project**. It is not affiliated with, endorsed by or sponsored by Capcom. Mega Man, Mega Man Legends, The Misadventures of Tron Bonne and Rockman DASH are trademarks or copyrights of Capcom Co., Ltd.
 
 It contains **no game files, no BIOS files, no game audio and no game artwork**, and it downloads none. Players use files they already own.
 

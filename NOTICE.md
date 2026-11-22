@@ -1,7 +1,7 @@
 # Notices
 
 ## Unofficial fan project
-Flutter Deck is an unofficial, free fan-made launcher. It is not affiliated with, endorsed by or sponsored by Capcom. Mega Man, Mega Man Legends, Rockman DASH and related names, characters and designs are trademarks or copyrights of Capcom Co., Ltd. The MIT licence in LICENSE grants no rights to any of them.
+Flutter Deck is an unofficial, free fan-made launcher. It is not affiliated with, endorsed by or sponsored by Capcom. Mega Man, Mega Man Legends, Mega Man Legends 2, The Misadventures of Tron Bonne, Rockman DASH and related names, characters and designs are trademarks or copyrights of Capcom Co., Ltd. The MIT licence in LICENSE grants no rights to any of them.
 
 Flutter Deck contains no game files, BIOS files, game audio or game artwork, and does not download any. Users point it at files they already own.
 
