@@ -596,7 +596,7 @@ public static class OverlayHostTest {
       Check(FindById<TextBlock>(rootLc,"aud-game-volume-value").Text=="60%"&&NameOf(pb)=="Resume","state: right after the overlay's own command the old state is ignored, so a volume drag is not undone");
       tt+=2000;lc.Step(tt);
       Check(FindById<TextBlock>(rootLc,"aud-game-volume-value").Text=="35%"&&NameOf(pb)=="Pause","state: a moment later the game's own state wins again (Esc in the game ended the pause)");
-      gs.Unlimited=true;tt+=3000;lc.Step(tt);Check(Ticked(rootLc,"view-speed"),"state: the game runs at unlimited speed (its Tab key), so the row is ticked");gs.Unlimited=false;tt+=3000;lc.Step(tt);Check(!Ticked(rootLc,"view-speed"),"state: back to normal speed clears the tick");
+      gs.Unlimited=true;tt+=3000;lc.Step(tt);Check(Ticked(rootLc,"view-speed"),"state: the game runs at unlimited speed, so the row is ticked");gs.Unlimited=false;tt+=3000;lc.Step(tt);Check(!Ticked(rootLc,"view-speed"),"state: back to normal speed clears the tick");
       gs.LastShot=@"C:\runs\game_shots\shot_f000100.bmp";tt+=600;lc.Step(tt);
       if(lc.HotkeyRegistered)Check(lc.Note=="Screenshot saved: shot_f000100.bmp","state: a new screenshot is named in the menu note");
       lc.Step(tt+=600);Check(lc.Note=="Screenshot saved: shot_f000100.bmp"||!lc.HotkeyRegistered,"state: the same screenshot is not announced twice");

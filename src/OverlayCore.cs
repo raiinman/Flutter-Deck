@@ -322,7 +322,7 @@ public static class OverlayMenus {
       case "View":
         l.Add(new MenuItemSpec("view-fullscreen","Fullscreen","F11",false,false));l.Add(I("view-fit","Fit game to window"));l.Add(I("view-aspect","Preserve 4:3 aspect"));
         l.Add(I("view-perf","Performance overlay"));l.Add(I("view-status","Deck status bar"));l.Add(new MenuItemSpec("view-scale","UI scale…",null,true,false));
-        l.Add(new MenuItemSpec("view-screenshot","Take screenshot","F12",false,true));l.Add(new MenuItemSpec("view-speed","Unlimited speed","Tab",false,true));l.Add(new MenuItemSpec("view-preset","Picture preset…",null,true,true));
+        l.Add(new MenuItemSpec("view-screenshot","Take screenshot","F12",false,true));l.Add(new MenuItemSpec("view-speed","Unlimited speed",null,false,true));l.Add(new MenuItemSpec("view-preset","Picture preset…",null,true,true));
         l.Add(X("overlay-hover","Quick bar (hover)"));l.Add(X("overlay-fullscreen-only","Quick bar only in full screen"));break;
       case "Saves":l.Add(I("sav-states","Save states…"));l.Add(I("sav-load","Load state…"));l.Add(I("sav-folder","Open save folder"));break;
       case "Audio":l.Add(new MenuItemSpec("aud-game-volume","Game volume...",null,true,true));l.Add(X("aud-game-mute","Mute game audio"));break;
