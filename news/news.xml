@@ -1,0 +1,21 @@
+<news version="1">
+  <item id="20261123-0009-flutter-deck-0-4-1-beta-is-here" kind="update" date="2026-11-23T00:09:27Z"><title>Flutter Deck 0.4.1 Beta is here</title><body>0.4.1 Beta brings new features to Mega Man Legends.
+
+-Gamepad buttons screen: choose what each button of an Xbox or PlayStation 5 pad does.
+-Jet Skates: fire and lock on while skating. 
+-Hold Circle to put the skates on, press Circle to take them off.
+-New lock-on marker, on by default.
+-In-game overlay: Pause, Full screen, Take screenshot, Mute and a game volume bar now work.
+-Widescreen: the white gaps at the left and right edges of outdoor scenes are fixed.
+-Tab no longer switches the game to unlimited speed. Unlimited speed is still in the overlay menu.
+
+This message board now shows real notices from the developer.
+
+To get the new game features, install the new Setup or zip, then press &quot;Build my game&quot; again. A launcher update alone does not change games you already built.
+
+This is a Beta, so some rough edges are expected. The full list is in the changelog.</body></item>
+  <item id="notices-and-updates" kind="announcement" date="2026-11-22T17:59:27Z"><title>How updates and notices work</title><body>This board shows notices from the Flutter Deck developer. It checks when the launcher starts, every 15 minutes while it is open, and when you press Refresh. Nothing is sent from your PC except an ordinary web request.
+
+Flutter Deck also looks for new versions by itself (see Updates). A new version replaces the launcher program only. Features that live in the game build tools, such as new game controls, come with the new Setup or the new zip from the Releases page. After installing them, press Build my game again for each game you want the new features in.</body></item>
+  <item id="release-0-4-0" kind="changelog" date="2026-11-22T04:56:16Z"><title>Flutter Deck 0.4.0 Beta</title><body>The first public beta. It launches Mega Man Legends, Mega Man Legends 2 and The Misadventures of Tron Bonne, built from your own US disc images. No game files are included. It has a Library, Build my game, Play with a friend, an in-game overlay, picture presets, a key editor, memory card saves, music, a signed updater and a per-user installer.</body></item>
+</news>
