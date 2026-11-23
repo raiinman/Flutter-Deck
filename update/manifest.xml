@@ -1,6 +1,20 @@
 <update schema='1' product='flutterdeck' channel='stable' platform='win-x64'>
-<version>0.4.0</version>
-<sequence>2</sequence>
-<file name='FlutterDeck.exe' length='3998208' sha256='FFD3E867FFB35D73873F77D83CF406645EF04D476C9C061058C6A75792166D79' url='https://github.com/raiinman/Flutter-Deck/releases/download/v0.4.0/FlutterDeck.exe'/>
-<notes>Flutter Deck 0.4.0 Beta: the first public beta. Launches Mega Man Legends, Mega Man Legends 2 and The Misadventures of Tron Bonne, built from your own discs.</notes>
+<version>0.4.1</version>
+<sequence>3</sequence>
+<file name='FlutterDeck.exe' length='4030464' sha256='336D4327C8F54E9C3A5C9639F526F4E38EB9AF3B72DF236D9D1B955F3BB8ACEF' url='https://github.com/raiinman/Flutter-Deck/releases/download/v0.4.1/FlutterDeck.exe'/>
+<notes>Flutter Deck 0.4.1 Beta
+
+New in Mega Man Legends:
+- Gamepad buttons screen: choose what each button of an Xbox or PlayStation 5 pad does, and set the stick dead zone.
+- Jet Skates: fire and lock on while skating. Hold Circle to put the skates on, press Circle to take them off. Three new switches in Settings, all on by default.
+- New lock-on marker, on by default. Optional right-stick flick to switch target.
+- In-game overlay: Pause, Full screen, Take screenshot, Mute and a game volume bar now work.
+- Widescreen: the white gaps at the left and right edges of outdoor scenes are fixed.
+
+New in the launcher:
+- The message board on the Home screen now shows real notices from the developer.
+
+IMPORTANT: a launcher update replaces the launcher only. To get the new game features, install the new Setup or zip, then press &quot;Build my game&quot; again. Games you built with 0.4.0 do not have them yet.
+
+This is a Beta, so some rough edges are expected.</notes>
 </update>
