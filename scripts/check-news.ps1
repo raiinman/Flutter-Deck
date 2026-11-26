@@ -1,8 +1,8 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
-New-Item -ItemType Directory -Force (Join-Path $Here '.dream-loop') | Out-Null
+Set-Location $FdSrc
+New-Item -ItemType Directory -Force (Join-Path $FdSrc '.dream-loop') | Out-Null
 $fx="$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319"
 & "$fx\csc.exe" /nologo /target:exe /out:.dream-loop\NewsPureTest.exe NewsFeed.cs ..\tests\NewsPureTest.cs DeckPaths.cs
 if($LASTEXITCODE -ne 0){throw 'News test compile failed'}

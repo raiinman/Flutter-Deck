@@ -23,7 +23,7 @@
 
 ---
 
-Flutter Deck is a free, unofficial launcher for **Mega Man Legends**, **Mega Man Legends 2** and **The Misadventures of Tron Bonne** on Windows. It lives on a ship deck. You point it at the disc image you already own, and it takes care of the rest: your library, your picture settings, your saves, your music and your friends.
+Flutter Deck is a free, unofficial launcher for **Mega Man Legends**, **Mega Man Legends 2** and **The Misadventures of Tron Bonne** on Windows. It lives on a ship deck. You point it at the disc image you already own, and it takes care of the rest: your library, your picture settings, your saves and your music.
 
 It never contains the game. Every player builds their own copy from their own disc, on their own PC.
 
@@ -34,7 +34,7 @@ It never contains the game. Every player builds their own copy from their own di
 | 🚀 | **Play** | Starts Mega Man Legends 1, Mega Man Legends 2 and The Misadventures of Tron Bonne from your own game program, after readiness checks. | ✅ Built and tested. Checked in play (Legends 1). Games 2 and 3: features coming soon |
 | 📚 | **Library** | A grid of your games. Covers can come from your own disc code (off until you turn them on). | ✅ Built and tested |
 | 🛠️ | **Build my game** | One button builds the game from your disc on your PC, with progress and plain error messages. | ✅ Built and tested |
-| 👥 | **Play with a friend** | Host or join with an invite code. Direct connection, no server, and help with your router. | ✅ Built and tested |
+| 👥 | **Play with a friend** | Host or join with an invite code. Direct connection, no server, and help with your router. | 🔜 Coming soon |
 | 🎛️ | **In-game overlay** | A pill at the top of the game window, with pause, restart, stop, full screen and a settings menu. Hotkey **Ctrl+Alt+O**. | ✅ Built and tested |
 | 🖼️ | **Picture presets** | Pick a picture look while you play. [DSI Prism](docs/specs/SPEC-presets.md) applies it to the running game. | ✅ Built and tested. Checked on a running game |
 | ⌨️ | **Key editor** | Change the keyboard keys for the game. | ✅ Built and tested |
@@ -43,14 +43,14 @@ It never contains the game. Every player builds their own copy from their own di
 | 🔄 | **Updates and installer** | A signed self-updater and a per-user installer with no administrator prompt. | ✅ Built and tested |
 | 🔍 | **Window scaler** | An experimental scaler for a local window, with several filters. | ✅ Built and tested. Experimental |
 
-Every feature above is built and tested. Work continues on all of them.
+Every feature above is built and tested unless it is marked coming soon. Work continues on all of them.
 
 ## How to play
 
-1. **Download Flutter Deck.** Open the [Releases page](https://github.com/raiinman/Flutter-Deck/releases) and download `FlutterDeckSetup-0.4.0.exe`. Run it and follow the page: it installs for you only and does not ask for administrator rights. It carries everything the launcher needs, so there is nothing else to install. Prefer no installer? Download `FlutterDeck-0.4.0-win-x64.zip` instead, unzip it anywhere and run `FlutterDeck.exe`.
+1. **Download Flutter Deck.** Open the [Releases page](https://github.com/raiinman/Flutter-Deck/releases) and download `FlutterDeckSetup-0.4.2.exe`. Run it and follow the page: it installs for you only and does not ask for administrator rights. It carries everything the launcher needs, so there is nothing else to install. Prefer no installer? Download `FlutterDeck-0.4.2-win-x64.zip` instead, unzip it anywhere and run `FlutterDeck.exe`.
 2. **Point it at your disc.** Flutter Deck finds the disc image of your game (Mega Man Legends, Mega Man Legends 2 or The Misadventures of Tron Bonne) in a folder you choose. It checks the files and keeps only a reference to them.
 3. **Build your game.** The launcher builds the game from your disc, on your PC. The finished game program stays on your PC and never goes into this repository or into a release.
-4. **Play.** Press Play. Change the picture, the keys and the volume while you play, or invite a friend.
+4. **Play.** Press Play. Change the picture, the keys and the volume while you play.
 
 ## Which discs you need
 
@@ -69,7 +69,7 @@ You need your own copy of each game you want to play: the **US (NTSC-U)** releas
 
 ## Status
 
-Flutter Deck is in **beta**: it is still in active development. Every feature in the table is built and tested, and each one is still being improved.
+Flutter Deck is in **beta**: it is still in active development. Every feature in the table is built and tested unless it is marked coming soon, and each one is still being improved.
 
 Most of the 84 entries in the feature catalogue are ideas for later, not features yet.
 

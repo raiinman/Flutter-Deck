@@ -57,12 +57,24 @@ static class PadMapPureTest {
     Check(File.ReadAllText(f+PadMap.FirstCopySuffix)=="# my own notes\nB = SQUARE\n","later saves never replace the .before-editor copy");
     var keepLook=P("look_sensitivity = 200\nlook_invert_y = 0\n");Check(keepLook.Format().Contains("look_sensitivity = 200")&&keepLook.Format().Contains("look_invert_y = 0"),"camera lines the editor does not show are written back unchanged");
     var none=PadMap.Load(Path.Combine(dir,"missing.txt"));Check(!none.AnyChange,"no file means the defaults");
+    {   // the walk switch (game contract 2.41): only a program with the quick roll knows the word WALK
+      var wk=PadMap.Defaults(true);var old=PadMap.Defaults();
+      Check(PadMap.Bit("WALK")==0x40000u&&PadMap.Walk==0x40000u&&PadMap.Words(PadMap.Walk)=="WALK"&&PadMap.Words(PadMap.Walk|PadMap.CamReset)=="CAM_RESET + WALK","WALK is the game's bit 0x40000 and is written back as the word WALK");
+      Check(wk.Effective(10,false)==PadMap.Walk&&wk.Effective(10,true)==PadMap.Walk&&old.Effective(10,false)==0&&old.Effective(10,true)==0,"with the walk switch the left stick press gives WALK by default; without it nothing, as before");
+      Check(PadMap.Default(10,false,true)==PadMap.Walk&&PadMap.Default(10,false)==0&&PadMap.Default(11,false,true)==PadMap.CamReset,"only the left stick press changes by default");
+      Check(Array.IndexOf(PadMap.ActionsFor(true),"WALK")>=0&&Array.IndexOf(PadMap.ActionsFor(false),"WALK")<0&&PadMap.ActionsFor(true).Length==PadMap.ActionsFor(false).Length+1&&PadMap.ActionsFor(true)[PadMap.ActionsFor(true).Length-1]=="NONE","the editor offers WALK only for a program that has it, and NONE stays last");
+      Check(wk.Missing(false).Count==0&&wk.Lost(true).Count==0&&wk.Lost(false).Count==0&&wk.Shared(false).Count==0,"WALK is not a game button: it never shows as lost, and the default gives it to one button only");
+      var wr=P("L3 = WALK\nR3 = CAM_RESET + WALK\nA = walk\n");Check(wr.Get(10)==PadMap.Walk&&wr.Get(11)==(PadMap.CamReset|PadMap.Walk)&&wr.Get(0)==PadMap.Walk&&wr.NotUnderstood==0,"WALK is read in any case and combined with another action");
+      var wr2=PadMap.Defaults(true);wr2.Set(10,0);wr2.Set(12,PadMap.Walk);string wf=Path.Combine(dir,"walk-map.txt");wr2.Save(wf);string wt=File.ReadAllText(wf);
+      Check(wt.Contains("L3 = NONE\r\n")&&wt.Contains("DPAD_UP = WALK\r\n")&&!wt.Contains("R3 =")&&wt.Contains("CAM_RESET AIM WALK NONE")&&PadMap.Load(wf).Get(10)==0u&&PadMap.Load(wf).Get(12)==PadMap.Walk&&PadMap.Load(wf).NotUnderstood==0,"moving the walk switch off the stick press writes NONE for it; WALK is written back and read the same");
+      var wd=PadMap.Defaults(true);Check(wd.Get(10)==null&&!wd.AnyChange&&!PadMap.Defaults(true).Format().Contains("L3 ="),"the default walk switch is not written into the file (the game default applies)");
+    }
     Console.WriteLine("PadMap tests: "+passed+" passed, "+failed+" failed");
     return failed==0?0:1;
   }
   // One line per file: the 16 button masks after reading it over each default map, then look sensitivity, invert, dead zone, lines not understood.
   static string Dump(string file){
-    var m=PadMap.Load(file);var s=new StringBuilder();
+    var m=PadMap.Load(file);m.WalkKnown=true;var s=new StringBuilder();   // the game reader it is compared with (the kit's rtc_padmap.h) has the walk default on the left stick press
     foreach(bool tps in new[]{false,true}){for(int i=0;i<PadMap.ButtonCount;i++)s.Append(m.Effective(i,tps).ToString("x")).Append(' ');}
     s.Append(m.LookSensitivity??100).Append(' ').Append(m.LookInvert??0).Append(' ').Append(m.EffectiveDeadzone).Append(' ').Append(m.NotUnderstood);
     return s.ToString();
@@ -75,7 +87,7 @@ static class PadMapPureTest {
       "CROSS = CIRCLE\nL1 = R1\nOPTIONS = SELECT\nCREATE = START\n","L2 = AIM\nLT = L2\n","DPAD_UP = DOWN\ndpad_down = up\n","stick_deadzone = 5\nstick_deadzone = 50\n","stick_deadzone = +7\n",
       "stick_deadzone = -7\n","stick_deadzone = 007\n","stick_deadzone =  12  \n","look_sensitivity = 400\nlook_sensitivity = 401\n","look_invert_y = 1\nlook_invert_y = 01\n","A = SQUARE\r\nB = CROSS\r\n",
       "\xEF\xBB\xBF" + "A = SQUARE\n","\xEF\xBB\xBF" + "# comment\nB = CROSS\n","A = SQUARE"+new string(' ',500)+"\nB = CROSS\n","A = SQUARE"+new string(' ',501)+"\n","A = SQUARE"+new string(' ',1100)+"\nB = CROSS\n",
-      "A = SQUARE","A = NONE\nB = none + CROSS\n","R3 = CAM_RESET + AIM + CROSS\n","A\t=\tSQUARE\t\n","A = SQ UARE\n","A = SQUARE\rB = CROSS\n","A == SQUARE\n","A = SQUARE = CROSS\n","Ä = SQUARE\n"};
+      "A = SQUARE","A = NONE\nB = none + CROSS\n","R3 = CAM_RESET + AIM + CROSS\n","L3 = WALK\n","L3 = NONE\nR3 = CAM_RESET + WALK\n","l3=walk+cross\n","L3 = WALK +\n","A\t=\tSQUARE\t\n","A = SQ UARE\n","A = SQUARE\rB = CROSS\n","A == SQUARE\n","A = SQUARE = CROSS\n","Ä = SQUARE\n"};
     // Found by an independent check (2026-11-22): zero bytes, Ctrl-Z, CR LF at the length limit, other spaces before a number.
     hand.AddRange(new[]{"A = SQUARE\0\nB = SQUARE\n","A = SQUARE\0junk","A = SQUARE\n\n\0\nB = CROSS\n","A = SQUARE\n\x001A","A = SQU\u001AARE\nB = SQUARE\n","A = SQUARE\nB = CROSS\n\u001A","\u001A",
       "A = SQUARE"+new string(' ',500)+"\r\nB = CROSS\r\n","A = SQUARE"+new string(' ',501)+"\r\n","stick_deadzone = \v30\n","stick_deadzone = \f30\n","look_sensitivity = \r200\n","A = SQUARE\rB = CROSS\r\n",
@@ -84,7 +96,7 @@ static class PadMapPureTest {
     File.WriteAllBytes(Path.Combine(dir,(n++).ToString("D4")+".txt"),Concat(Encoding.Unicode.GetPreamble(),Encoding.Unicode.GetBytes("A = SQUARE\r\nB = CROSS\r\n")));
     File.WriteAllBytes(Path.Combine(dir,(n++).ToString("D4")+".txt"),Encoding.Unicode.GetBytes("A = SQUARE\r\nB = CROSS\r\n"));
     string[] keys={"A","B","X","Y","LB","RB","LT","RT","BACK","START","L3","R3","DPAD_UP","DPAD_DOWN","DPAD_LEFT","DPAD_RIGHT","CROSS","CIRCLE","SQUARE","TRIANGLE","L1","R1","L2","R2","CREATE","OPTIONS","a","dpad_left","Q","START2","stick_deadzone","look_sensitivity","look_invert_y",""};
-    string[] vals={"CROSS","CIRCLE","SQUARE","TRIANGLE","L1","R1","L2","R2","START","SELECT","UP","DOWN","LEFT","RIGHT","CAM_RESET","AIM","NONE","cross","JUMP","","0","1","2","5","20","50","51","100","10","400","9","x","-1"};
+    string[] vals={"CROSS","CIRCLE","SQUARE","TRIANGLE","L1","R1","L2","R2","START","SELECT","UP","DOWN","LEFT","RIGHT","CAM_RESET","AIM","WALK","NONE","cross","JUMP","","0","1","2","5","20","50","51","100","10","400","9","x","-1"};
     string[] seps={" = ","=","  =\t"," =",": "};string[] joins={" + ","+"," ++ "," +"};
     var rnd=new Random(20261122);
     for(int f=0;f<400;f++){

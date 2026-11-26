@@ -622,5 +622,135 @@ public static class OverlayHostTest {
       Check(!FindById<Button>(ld.Content,"overlay-pause").IsEnabled,"live control: the feature without a way to send leaves Pause disabled");
       ld.Dispose();Pump();DestroyWindow(gw3);
     }
+
+    // cheat codes (game contract 2.39): the launcher keeps the list and the file; the overlay shows the rows and asks for one switch at a time
+    {
+      var gw4=CreateWindowExW(0x08000080,Win32Probe.GameClass,Win32Probe.TitlePrefix+" (cheat codes)",0x90000000u,GX,GY,GW,GH,IntPtr.Zero,IntPtr.Zero,IntPtr.Zero,IntPtr.Zero);
+      var model=new List<GameCode>();for(int i=0;i<30;i++)model.Add(new GameCode{Name="Test code "+i});
+      model[2].Enabled=false;model[2].Hint="This code has a line the game cannot read";model[5].NeedsValue=true;model[7].NeedsValue=true;model[7].Width=2;
+      var asked=new List<string>();var picked=new List<string>();var ch=new OverlayHost();
+      ch.SetCodeValue=delegate(int i,int d){picked.Add(i+":"+d);model[i].Value=d;model[i].On=true;return null;};
+      ch.Codes=delegate{return model;};
+      ch.SetCode=delegate(int i,bool on){asked.Add(i+":"+(on?"on":"off"));if(i==3)return "Another code on now uses the same gate.";model[i].On=on;return null;};
+      var cc=GameOverlay.Attach(pid,ch,new OverlaySettings{KeyboardMenu=true},Path.Combine(scratch,"codes.txt"),new OverlayFeatures(new[]{OverlayLayout.CodesLive}),probe,false);
+      var rootCc=cc.Content;long ct=1990000;probe.Foreground=true;
+      Action ensureC=delegate{
+        if(!cc.Visible){probe.Y=GY+300;cc.Step(ct+=100);probe.Y=GY+2;cc.Step(ct+=100);cc.Step(ct+=300);}
+        if(cc.Mode==OverlayMode.Bar){Invoke(FindById<Button>(rootCc,"overlay-menu"));cc.Step(ct+=100);}
+      };
+      ensureC();cc.OpenSubmenu("Session");
+      Check(FindById<Button>(rootCc,"ses-codes")!=null&&FindById<Button>(rootCc,"ses-codes").IsEnabled,"cheat codes: Session > Cheat codes is enabled when the game reports codes-live");
+      Check(!FindById<Button>(rootCc,"overlay-pause").IsEnabled&&!FindById<Button>(rootCc,"ses-resume").IsEnabled,"cheat codes: they do not need live control: Pause stays disabled here");
+      Invoke(FindById<Button>(rootCc,"ses-codes"));cc.Step(ct+=50);
+      Check(cc.OpenSubmenuName=="Cheat codes"&&FindById<Button>(rootCc,"code-0")!=null&&FindById<Button>(rootCc,"code-29")!=null,"cheat codes: the panel opens with one row per code ("+cc.OpenSubmenuName+")");
+      Check(FindById<TextBlock>(rootCc,"codes-status").Text.Contains("Off stops a code"),"cheat codes: the panel says that off does not undo what a code changed");
+      Invoke(FindById<Button>(rootCc,"code-0"));cc.Step(ct+=50);
+      Check(asked.Count==1&&asked[0]=="0:on"&&Ticked(rootCc,"code-0"),"cheat codes: a click switches a code on and ticks it");
+      Invoke(FindById<Button>(rootCc,"code-0"));cc.Step(ct+=50);
+      Check(asked.Count==2&&asked[1]=="0:off"&&!Ticked(rootCc,"code-0"),"cheat codes: the second click switches it off");
+      Check(!FindById<Button>(rootCc,"code-2").IsEnabled&&(string)FindById<Button>(rootCc,"code-2").ToolTip=="This code has a line the game cannot read","cheat codes: a code the game cannot read is greyed out and says why");
+      int n0=asked.Count;try{Invoke(FindById<Button>(rootCc,"code-2"));}catch(Exception){}cc.Step(ct+=50);
+      Check(asked.Count==n0,"cheat codes: a greyed-out code asks the launcher for nothing");
+      Invoke(FindById<Button>(rootCc,"code-3"));cc.Step(ct+=50);
+      Check(asked[asked.Count-1]=="3:on"&&!Ticked(rootCc,"code-3")&&FindById<TextBlock>(rootCc,"codes-status").Text=="Another code on now uses the same gate.","cheat codes: a code the launcher refuses stays off and the reason is shown");
+      Invoke(FindById<Button>(rootCc,"code-4"));cc.Step(ct+=50);
+      Check(Ticked(rootCc,"code-4")&&FindById<TextBlock>(rootCc,"codes-status").Text.Contains("Off stops a code"),"cheat codes: the next good switch clears the refusal note");
+      // a code with a "?": a value button, and a strip of sixteen digits that opens under the row
+      var vbtn=FindById<Button>(rootCc,"code-5-value");var strip5=FindById<FrameworkElement>(rootCc,"code-5-picker");
+      Check(vbtn!=null&&vbtn.IsEnabled&&strip5!=null&&strip5.Visibility==Visibility.Collapsed&&FindById<TextBlock>(rootCc,"code-0-text")!=null&&FindById<Button>(rootCc,"code-0-value")==null,"cheat codes: only a code with a question mark has a value button, and its digits are closed");
+      int a5=asked.Count;Invoke(FindById<Button>(rootCc,"code-5"));cc.Step(ct+=50);
+      Check(asked.Count==a5&&strip5.Visibility==Visibility.Visible&&FindById<TextBlock>(rootCc,"codes-status").Text=="Pick a value first.","cheat codes: a click on a value code with no value opens the digits and asks for one; nothing is switched");
+      Check(FindById<Button>(rootCc,"code-5-pick-A")!=null&&FindById<Button>(rootCc,"code-5-pick-0")!=null&&FindById<Button>(rootCc,"code-5-pick-F")!=null,"cheat codes: the digits 0 to F are there");
+      Invoke(FindById<Button>(rootCc,"code-5-pick-A"));cc.Step(ct+=50);
+      Check(picked.Count==1&&picked[0]=="5:10"&&strip5.Visibility==Visibility.Collapsed&&Ticked(rootCc,"code-5")&&FindById<TextBlock>(rootCc,"code-5-value-text")==null,"cheat codes: a digit asks the launcher for that value, switches the code on and closes the digits");
+      Check(((TextBlock)vbtn.Content).Text.StartsWith("A"),"cheat codes: the value button shows the picked digit ("+((TextBlock)vbtn.Content).Text+")");
+      Invoke(vbtn);cc.Step(ct+=50);Check(strip5.Visibility==Visibility.Visible,"cheat codes: the value button opens the digits again");
+      Invoke(vbtn);cc.Step(ct+=50);Check(strip5.Visibility==Visibility.Collapsed,"cheat codes: and closes them");
+      Invoke(FindById<Button>(rootCc,"code-5"));cc.Step(ct+=50);
+      Check(asked[asked.Count-1]=="5:off"&&!Ticked(rootCc,"code-5")&&picked.Count==1,"cheat codes: with a value picked, the name switches the code off");
+      // a two-digit value is picked digit by digit from the same strip
+      var vb7=FindById<Button>(rootCc,"code-7-value");var strip7=FindById<FrameworkElement>(rootCc,"code-7-picker");int p7=picked.Count;
+      Invoke(vb7);cc.Step(ct+=50);Check(strip7.Visibility==Visibility.Visible&&((TextBlock)vb7.Content).Text.StartsWith("pick"),"cheat codes: a two-digit code opens its digits");
+      Invoke(FindById<Button>(rootCc,"code-7-pick-B"));cc.Step(ct+=50);
+      Check(picked.Count==p7&&strip7.Visibility==Visibility.Visible&&((TextBlock)vb7.Content).Text.StartsWith("B_")&&FindById<TextBlock>(rootCc,"codes-status").Text.Contains("Digit 1 of 2"),"cheat codes: the first digit is held, the strip stays open and the button shows B_ ("+((TextBlock)vb7.Content).Text+")");
+      Invoke(FindById<Button>(rootCc,"code-7-pick-4"));cc.Step(ct+=50);
+      Check(picked.Count==p7+1&&picked[picked.Count-1]=="7:180"&&strip7.Visibility==Visibility.Collapsed&&((TextBlock)vb7.Content).Text.StartsWith("B4"),"cheat codes: the second digit sends the whole value (B4 = 180) and closes the strip ("+(picked.Count>p7?picked[picked.Count-1]:"nothing")+")");
+      Invoke(vb7);cc.Step(ct+=50);Invoke(FindById<Button>(rootCc,"code-7-pick-1"));Invoke(vb7);cc.Step(ct+=50);Check(((TextBlock)vb7.Content).Text.StartsWith("B4")&&picked.Count==p7+1&&!FindById<TextBlock>(rootCc,"codes-status").Text.StartsWith("Digit"),"cheat codes: closing the strip half way throws the held digit away, and the line about the next digit goes with it");
+      var sv=FindById<ScrollViewer>(rootCc,"codes-scroll");((FrameworkElement)rootCc).UpdateLayout();
+      Check(sv!=null&&sv.ScrollableHeight>0&&sv.ActualHeight<=221&&((FrameworkElement)rootCc).ActualHeight<=430,"cheat codes: 30 codes do not make a tall panel: the list scrolls (list "+(sv==null?0:sv.ActualHeight)+", overlay "+((FrameworkElement)rootCc).ActualHeight+")");
+      sv.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice,Environment.TickCount,-360){RoutedEvent=UIElement.MouseWheelEvent,Source=sv});Pump();
+      Check(sv.VerticalOffset>0,"cheat codes: the mouse wheel scrolls the list ("+sv.VerticalOffset+")");
+      sv.ScrollToTop();Pump();
+      // keyboard control: the highlight walks the rows and the list scrolls to keep it in sight
+      cc.Dispose();Pump();
+      var cc2=GameOverlay.Attach(pid,ch,new OverlaySettings{KeyboardMenu=true},Path.Combine(scratch,"codes2.txt"),new OverlayFeatures(new[]{OverlayLayout.CodesLive}),probe,false);
+      var rootC2=cc2.Content;long c2=1991000;
+      if(cc2.HotkeyRegistered){
+        probe.Foreground=true;probe.Y=GY+300;cc2.Step(c2+=100);
+        SendMessageW(cc2.HotkeyHandle,0x0312,new IntPtr(0x4F56),IntPtr.Zero);cc2.TestForeground=true;cc2.Step(c2+=100);cc2.Step(c2+=100);
+        Check(cc2.NavActive,"cheat codes: keyboard control starts with the overlay key");
+        cc2.HandleKey(Key.Down,ModifierKeys.None,false);cc2.HandleKey(Key.Down,ModifierKeys.None,false);cc2.HandleKey(Key.Right,ModifierKeys.None,false);
+        Check(cc2.NavFocusId=="ses-stop","cheat codes: keyboard: the highlight is on the first working row of Session ("+cc2.NavFocusId+")");
+        cc2.HandleKey(Key.Down,ModifierKeys.None,false);Check(cc2.NavFocusId=="ses-codes","cheat codes: keyboard: Down reaches the Cheat codes row ("+cc2.NavFocusId+")");
+        cc2.HandleKey(Key.Enter,ModifierKeys.None,false);Pump();
+        Check(cc2.OpenSubmenuName=="Cheat codes"&&cc2.NavFocusId=="code-0","cheat codes: keyboard: Enter opens the panel and the highlight is on its first code ("+cc2.OpenSubmenuName+", "+cc2.NavFocusId+")");
+        for(int i=0;i<10;i++)cc2.HandleKey(Key.Down,ModifierKeys.None,false);Pump();
+        var sv2=FindById<ScrollViewer>(rootC2,"codes-scroll");
+        Check(cc2.NavFocusId=="code-9","cheat codes: keyboard: Down skips the greyed-out code, stops twice on each value code (name, value button) and never on the closed digits ("+cc2.NavFocusId+")");
+        Check(sv2.VerticalOffset>0,"cheat codes: keyboard: the list scrolled to keep the highlighted row in sight ("+sv2.VerticalOffset+")");
+        var ring=FindById<FrameworkElement>(rootC2,"overlay-nav-ring");Check(ring!=null&&ring.Visibility==Visibility.Visible,"cheat codes: keyboard: the highlight ring is shown on a scrolled row");
+        int k0=asked.Count;cc2.HandleKey(Key.Enter,ModifierKeys.None,false);Check(asked.Count==k0+1&&asked[asked.Count-1]=="9:on","cheat codes: keyboard: Enter switches the highlighted code");
+        for(int i=0;i<10;i++)cc2.HandleKey(Key.Up,ModifierKeys.None,false);Pump();
+        Check(cc2.NavFocusId=="code-0"&&sv2.VerticalOffset<=2,"cheat codes: keyboard: Up scrolls the list back to the top ("+cc2.NavFocusId+", "+sv2.VerticalOffset+")");
+        // the mouse wheel moves the list: the highlight must follow what can be seen, so Enter never acts on a hidden row
+        cc2.HandleKey(Key.Down,ModifierKeys.None,false);cc2.HandleKey(Key.Up,ModifierKeys.None,false);Pump();
+        sv2.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice,Environment.TickCount,-600){RoutedEvent=UIElement.MouseWheelEvent,Source=sv2});Pump();cc2.Step(c2+=100);
+        Check(sv2.VerticalOffset>40&&cc2.NavFocusId.StartsWith("code-")&&cc2.NavFocusId!="code-0","cheat codes: keyboard: after the wheel scrolled the list the highlight is on a row in sight ("+cc2.NavFocusId+", offset "+sv2.VerticalOffset+")");
+        var ring3=FindById<FrameworkElement>(rootC2,"overlay-nav-ring");Check(ring3!=null&&ring3.Visibility==Visibility.Visible,"cheat codes: keyboard: and the ring shows on it");
+        int k1=asked.Count;string shownRow=cc2.NavFocusId;cc2.HandleKey(Key.Enter,ModifierKeys.None,false);
+        Check(asked.Count==k1+1&&asked[asked.Count-1].StartsWith(shownRow.Substring(5)+":"),"cheat codes: keyboard: Enter acts on the row that is in sight, not on code-0 ("+(asked.Count>k1?asked[asked.Count-1]:"nothing")+")");
+        // the mouse opens a strip above the highlighted row: the highlight must not be left out of sight
+        int guard=0;while(cc2.NavFocusId!="code-20"&&guard++<80)cc2.HandleKey(Key.Down,ModifierKeys.None,false);Pump();
+        Invoke(FindById<Button>(rootC2,"code-5-value"));Pump();cc2.Step(c2+=100);
+        var ring4=FindById<FrameworkElement>(rootC2,"overlay-nav-ring");
+        Check(cc2.NavFocusId.StartsWith("code-")&&ring4!=null&&ring4.Visibility==Visibility.Visible,"cheat codes: a strip opened by the mouse above the highlight does not leave the highlight out of sight ("+cc2.NavFocusId+")");
+        Invoke(FindById<Button>(rootC2,"code-5-value"));Pump();cc2.Step(c2+=100);
+        // opening one strip of digits closes another above it: the highlight must stay on the button the player chose
+        guard=0;while(cc2.NavFocusId!="code-5-value"&&guard++<60)cc2.HandleKey(Key.Down,ModifierKeys.None,false);
+        cc2.HandleKey(Key.Enter,ModifierKeys.None,false);Pump();
+        var st5=FindById<FrameworkElement>(rootC2,"code-5-picker");var st7=FindById<FrameworkElement>(rootC2,"code-7-picker");
+        Check(cc2.NavFocusId=="code-5-value"&&st5.Visibility==Visibility.Visible,"cheat codes: keyboard: Enter on a value button opens its digits and the highlight stays on that button ("+cc2.NavFocusId+")");
+        guard=0;while(cc2.NavFocusId!="code-7-value"&&guard++<60)cc2.HandleKey(Key.Down,ModifierKeys.None,false);
+        int pickedBefore=picked.Count;cc2.HandleKey(Key.Enter,ModifierKeys.None,false);Pump();
+        Check(st7.Visibility==Visibility.Visible&&st5.Visibility==Visibility.Collapsed&&cc2.NavFocusId=="code-7-value"&&picked.Count==pickedBefore,"cheat codes: keyboard: opening a second strip closes the first, the highlight stays on the button the player chose and nothing is picked ("+cc2.NavFocusId+")");
+        cc2.HandleKey(Key.Enter,ModifierKeys.None,false);Pump();Check(st7.Visibility==Visibility.Collapsed&&cc2.NavFocusId=="code-7-value"&&picked.Count==pickedBefore,"cheat codes: keyboard: Enter on that value button closes its digits again, still picking nothing");
+      }else Info("The overlay key was not free here; the keyboard part of the cheat codes panel was not exercised");
+      cc2.Dispose();Pump();
+      // without the word from the game, or with no list, there is no panel
+      var cn=GameOverlay.Attach(pid,ch,new OverlaySettings{KeyboardMenu=false},Path.Combine(scratch,"codes3.txt"),OverlayFeatures.None,probe,false);
+      cn.OpenSubmenu("Session");
+      Check(!FindById<Button>(cn.Content,"ses-codes").IsEnabled&&FindById<Button>(cn.Content,"code-0")==null,"cheat codes: a game that does not report codes-live gets a disabled row and no panel");
+      cn.Dispose();Pump();
+      var ch2=new OverlayHost();var cm=GameOverlay.Attach(pid,ch2,new OverlaySettings{KeyboardMenu=false},Path.Combine(scratch,"codes4.txt"),new OverlayFeatures(new[]{OverlayLayout.CodesLive}),probe,false);
+      Check(!FindById<Button>(cm.Content,"ses-codes").IsEnabled,"cheat codes: the feature word without a launcher list leaves the row disabled");
+      cm.Dispose();Pump();
+      var ch3=new OverlayHost();ch3.Codes=delegate{return new List<GameCode>();};ch3.SetCode=delegate(int i,bool on){return null;};
+      var ce=GameOverlay.Attach(pid,ch3,new OverlaySettings{KeyboardMenu=false},Path.Combine(scratch,"codes5.txt"),new OverlayFeatures(new[]{OverlayLayout.CodesLive}),probe,false);
+      probe.Foreground=true;probe.Y=GY+300;ce.Step(2000000);probe.Y=GY+2;ce.Step(2000100);ce.Step(2000400);if(ce.Mode==OverlayMode.Bar){Invoke(FindById<Button>(ce.Content,"overlay-menu"));ce.Step(2000500);}
+      ce.OpenSubmenu("Session");Invoke(FindById<Button>(ce.Content,"ses-codes"));ce.Step(2000600);
+      Check(FindById<TextBlock>(ce.Content,"codes-status").Text.Contains("memory-codes-list.txt"),"cheat codes: an empty list says where to put one");
+      ce.Dispose();Pump();
+      // an empty list and the keyboard: the highlight must not be left on a row that is not there
+      var ce2=GameOverlay.Attach(pid,ch3,new OverlaySettings{KeyboardMenu=true},Path.Combine(scratch,"codes6.txt"),new OverlayFeatures(new[]{OverlayLayout.CodesLive}),probe,false);
+      if(ce2.HotkeyRegistered){
+        long e2=2100000;probe.Foreground=true;probe.Y=GY+300;ce2.Step(e2+=100);
+        SendMessageW(ce2.HotkeyHandle,0x0312,new IntPtr(0x4F56),IntPtr.Zero);ce2.TestForeground=true;ce2.Step(e2+=100);ce2.Step(e2+=100);
+        ce2.HandleKey(Key.Down,ModifierKeys.None,false);ce2.HandleKey(Key.Down,ModifierKeys.None,false);ce2.HandleKey(Key.Right,ModifierKeys.None,false);ce2.HandleKey(Key.Down,ModifierKeys.None,false);
+        ce2.HandleKey(Key.Enter,ModifierKeys.None,false);Pump();
+        Check(ce2.OpenSubmenuName=="Cheat codes"&&ce2.NavFocusId=="menu-Session","cheat codes: keyboard: an empty panel leaves the highlight on the Session row, not on nothing ("+ce2.OpenSubmenuName+", "+ce2.NavFocusId+")");
+        ce2.HandleKey(Key.Down,ModifierKeys.None,false);Check(ce2.NavFocusId=="menu-View","cheat codes: keyboard: the next Down goes to the next menu, as it should");
+      }
+      ce2.Dispose();Pump();DestroyWindow(gw4);
+    }
   }
 }

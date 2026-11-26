@@ -161,7 +161,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     itemStyle.Setters.Add(new Setter(System.Windows.Controls.Control.ForegroundProperty,Ink("#F5EAD0")));itemStyle.Setters.Add(new Setter(FrameworkElement.FocusVisualStyleProperty,null));itemStyle.Setters.Add(new Setter(System.Windows.Controls.Control.TemplateProperty,(ControlTemplate)System.Windows.Markup.XamlReader.Parse(@"<ControlTemplate TargetType='ComboBoxItem' xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'><Border x:Name='Bd' Background='Transparent' BorderBrush='Transparent' BorderThickness='3,0,0,0' Padding='{TemplateBinding Padding}' SnapsToDevicePixels='True'><ContentPresenter VerticalAlignment='Center'/></Border><ControlTemplate.Triggers><Trigger Property='IsSelected' Value='True'><Setter TargetName='Bd' Property='Background' Value='#163B54'/><Setter TargetName='Bd' Property='BorderBrush' Value='#5ECDEB'/></Trigger><Trigger Property='IsHighlighted' Value='True'><Setter TargetName='Bd' Property='Background' Value='#41637D'/></Trigger></ControlTemplate.Triggers></ControlTemplate>")));
     Resources.Add(typeof(ComboBoxItem),itemStyle);
     Deactivated+=delegate{if(keyCapture!=null){keyCapture=null;keyNote="No change.";Render();}};PreviewMouseDown+=delegate(object sender,MouseButtonEventArgs e){if(e.ChangedButton==MouseButton.XButton1){GoBack();e.Handled=true;}else if(e.ChangedButton==MouseButton.XButton2){GoForward();e.Handled=true;}};PreviewKeyDown+=delegate(object sender,KeyEventArgs e){if(keyCapture!=null){CaptureKey(e);return;}if((e.Key==Key.System&&Keyboard.Modifiers==ModifierKeys.Alt&&(e.SystemKey==Key.Left||e.SystemKey==Key.Right))||e.Key==Key.BrowserBack||e.Key==Key.BrowserForward){if(e.SystemKey==Key.Left||e.Key==Key.BrowserBack)GoBack();else GoForward();e.Handled=true;return;}if(e.Key==Key.Escape && screen!="Library"){if(OpenDropDown(e.OriginalSource)!=null)return;Navigate("Library");nav[2].Focus();e.Handled=true;}};
-    Title="Flutter Deck | 0.4.1 Beta";System.Windows.Automation.AutomationProperties.SetAutomationId(this,"FlutterDeck");var prefs=LauncherPreferences.Load(LauncherPreferences.PathName);Width=prefs.Width;Height=Width*941.0/1672.0;Topmost=prefs.Topmost;game=GameRuntime.IsGame(prefs.Game)?prefs.Game:1;Closing+=delegate{FlushChoices();audio.Dispose();StopScaling();SaveWindowPreferences();StopOverlay();};MinWidth=1200;MinHeight=675;WindowStartupLocation=WindowStartupLocation.CenterScreen;
+    Title="Flutter Deck | 0.4.2 Beta";System.Windows.Automation.AutomationProperties.SetAutomationId(this,"FlutterDeck");var prefs=LauncherPreferences.Load(LauncherPreferences.PathName);Width=prefs.Width;Height=Width*941.0/1672.0;Topmost=prefs.Topmost;game=GameRuntime.IsGame(prefs.Game)?prefs.Game:1;Closing+=delegate{FlushChoices();audio.Dispose();StopScaling();SaveWindowPreferences();StopOverlay();};MinWidth=1200;MinHeight=675;WindowStartupLocation=WindowStartupLocation.CenterScreen;
     WindowStyle=WindowStyle.None;AllowsTransparency=true;Background=Brushes.Transparent;ResizeMode=ResizeMode.CanMinimize;
     var art=new BitmapImage();using(var s=Assembly.GetExecutingAssembly().GetManifestResourceStream("Ship")){art.BeginInit();art.CacheOption=BitmapCacheOption.OnLoad;art.StreamSource=s;art.EndInit();art.Freeze();}shipArt=art;
     var artwork=new Image{Source=art,Stretch=Stretch.Fill,IsHitTestVisible=false};RenderOptions.SetBitmapScalingMode(artwork,BitmapScalingMode.LowQuality);Place(artwork,0,0,1672,941);
@@ -610,13 +610,31 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     var unsaved=GameRuntime.UnsavedFiles(GameData);if(unsaved.Count>0)text+=" A save may not have been written: see setup and readiness.";
     return text;
   }
+  bool diagnosticsNoticeOpen;
   void PlayGame(){
     if(!GameRuntime.IsGame(game)||GameRunning)return;
+    if(diagnosticsNoticeOpen)return;   // the notice is waiting for its answer: nothing else may start a game meanwhile (the notice is modal: every launcher window waits for the answer)
+    if(GameRuntime.DiagnosticsNoticeDue(runtime,playCheck)){   // game contract 2.42: told once, before the first session that records; the answer is the player's choice and is saved with the game's settings
+      var noticeFor=runtime;bool? keepOn;diagnosticsNoticeOpen=true;
+      try{keepOn=ShowDiagnosticsNotice(false,true);}finally{diagnosticsNoticeOpen=false;}
+      if(!GameRuntime.DiagnosticsNoticeApply(noticeFor,keepOn))return;   // closed without an answer: nothing is chosen and no game starts; the notice comes again at the next Play
+      SaveRuntime();
+      if(!GameRuntime.IsGame(game)||GameRunning||noticeFor!=runtime)return;   // the state changed while the notice was open: the player presses Play again
+    }
+    {int guideKit=GuideBuilderKit(),guideDue=GameRuntime.GuideDue(runtime,playCheck,GuideBuilderNewer(),guideKit);   // new features that need instructions are explained once, before the first session that has them
+      if(guideDue!=0){
+        var guideFor=runtime;diagnosticsNoticeOpen=true;
+        try{ShowGuide(guideDue,true);}finally{diagnosticsNoticeOpen=false;}
+        GameRuntime.GuideShown(guideFor,guideDue,guideKit);if(guideFor==runtime)SaveRuntime();
+        if((guideDue&GameRuntime.GuideBuild)!=0)return;   // the player was just told to build the game again: the old program is not started for them; Play again starts it
+        if(!GameRuntime.IsGame(game)||GameRunning||guideFor!=runtime)return;   // the state changed while the guide was open: the player presses Play again
+      }
+    }
     restartBy=DateTime.MinValue; // a manual Play ends any pending Restart request
     try{
       BuildGate();   /* a program that a build made starts only while its marker proves it (DeckBuilder.cs) */
       var session=GameRuntime.Start(runtime,localSetup.Game[game-1],GameData,Kind.KnownHash,Kind,OtherData,FriendSetting());
-      gameSession=session;sessionGame=game;sessionCheck=playCheck;sessionThen=OverlayGameSettings.Copy(runtime);playFailed=false;playNote="";sessionLog.Add("game-started");StartOverlay(session);
+      gameSession=session;sessionGame=game;sessionCheck=playCheck;sessionThen=OverlayGameSettings.Copy(runtime);playFailed=false;playNote="";sessionLog.Add("game-started");codeSession=NewCodeSession(session,sessionGame);StartOverlay(session);
       if(audio.Playing){musicPausedForGame=true;audio.Toggle();} // the game has its own sound
       session.Process.Exited+=delegate{Dispatcher.BeginInvoke(new Action(delegate{GameEnded(session);}));};
       bool ended;try{ended=session.Process.HasExited;}catch{ended=false;}if(ended)GameEnded(session); // it may have ended before the handler was attached; if that cannot be read, the Exited handler above still reports the real end
@@ -642,6 +660,14 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     }catch{}
   }
   // overlay: starts the in-game overlay for this game. It must never stop the game from running, so a failure here is swallowed.
+  CodeSession codeSession; // the cheat codes of the running game and which are on; it lives as long as the game does, also when the overlay is attached again
+  // Only a game that was started with the code option has one (a program that reports 'codes-live', and a code file that could be made).
+  CodeSession NewCodeSession(GameSession session,int gid){
+    var c=sessionCheck;
+    if(c==null||!c.HasLiveCodes||session==null||session.Arguments==null||!session.Arguments.Contains(" --codes-watch")||!GameRuntime.IsGame(gid))return null;
+    string data=GameRuntime.DataFolderFor(gid);
+    return new CodeSession(CodeBook.FilePath(data),CodeBook.Load(CodeBook.BundledListPath(),CodeBook.ListPath(data)));
+  }
   void StartOverlay(GameSession session){
     StopOverlay();
     try{
@@ -668,13 +694,26 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
       // overlay: live control of the game (contract 2.34). The overlay hands over one command line; this writes the game's command file (LiveControl.Send: temp file, then rename). Only a program that reports 'live-control' is offered it.
       var liveCheck=sessionCheck??playCheck;bool liveControl=liveCheck!=null&&liveCheck.HasLiveControl;string liveFile=GameRuntime.ControlFilePath(GameRuntime.DataFolderFor(gid));var liveStart=sessionThen??runtimes[gid-1];
       if(liveControl){host.GameCommand=delegate(string line){if(!LiveControl.Send(liveFile,line))sessionLog.Add("live-control-failed");};host.GameVolume=delegate{return liveStart.Volume/100.0;};host.GameMuted=delegate{return liveStart.Mute;};host.GameState=delegate{var ls=LiveControl.ReadState(liveFile);return ls==null?null:new GameLiveState{Paused=ls.Paused,Muted=ls.Mute,Fullscreen=ls.Fullscreen,Unlimited=ls.Unlimited,Volume=ls.Volume,LastShot=ls.LastShot};};}
+      // overlay: cheat codes (contract 2.39). The overlay asks for one switch at a time; CodeSession writes the file the game watches. Only for a game started with the code option.
+      var featureNames=new List<string>();if(liveControl)featureNames.Add(OverlayLayout.LiveControl);
+      var cs=codeSession;
+      if(cs!=null){
+        featureNames.Add(OverlayLayout.CodesLive);
+        host.Codes=delegate{
+          var l=new List<GameCode>();
+          for(int i=0;i<cs.Count;i++){MemoryCode m=cs.At(i);bool bad=m.Problem.Length>0;
+            l.Add(new GameCode{Name=m.Name,On=cs.IsOn(i),Enabled=!bad,NeedsValue=m.NeedsValue,Width=Math.Max(1,m.Width),Value=cs.Value(i),Hint=bad?"This code has a line the game cannot read":cs.MayNotAct(i)?"Part of this code may not act in this game":m.NeedsValue&&cs.Value(i)<0?"Pick a value first":""});}
+          return l;};
+        host.SetCode=delegate(int index,bool on){string problem=cs.Set(index,on);if(problem!=null)sessionLog.Add("codes-failed");return problem;};
+        host.SetCodeValue=delegate(int index,int digit){string problem=cs.SetValue(index,digit);if(problem!=null)sessionLog.Add("codes-failed");return problem;};
+      }
       pictureBackend=new DeckPrismBackend(AppDomain.CurrentDomain.BaseDirectory,DeckPaths.Root);
       host.ApplyPicture=delegate(string mode){ApplyPicture(session,mode);};
       host.PictureStatus=delegate{return pictureStatus;};host.PictureSelected=delegate{return pictureSelected;};host.PictureBusy=delegate{return pictureBusy;};
       host.PicturePresentationForeground=delegate{return pictureBackend!=null&&pictureBackend.OwnsForegroundWindow();};host.LauncherForeground=delegate{return IsActive;};
       var overlayOptions=OverlaySettings.Load(OverlaySettings.PathName);
       if(!overlayOptions.Enabled)return; // the developer switched the overlay off in overlay.txt: no pill and no hotkey
-      overlay=GameOverlay.Attach(session.Process.Id,host,overlayOptions,OverlaySettings.PathName,liveControl?new OverlayFeatures(new[]{OverlayLayout.LiveControl}):OverlayFeatures.None,null,true);
+      overlay=GameOverlay.Attach(session.Process.Id,host,overlayOptions,OverlaySettings.PathName,featureNames.Count>0?new OverlayFeatures(featureNames):OverlayFeatures.None,null,true);
     }catch{overlay=null;}
   }
   void PictureChanged(){try{if(overlay!=null)overlay.RefreshPictureStatus();}catch{}}
@@ -708,7 +747,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     try{session.Process.WaitForExit(1500);code=session.Process.ExitCode;string said;lock(session.ErrorText){said=session.ErrorText.ToString();}reason=GameRuntime.ExitReason(code,session.SessionsFolder,session.StartedUtc,said,session.Arguments);}
     catch{reason="The game ended and its result could not be read.";}
     try{session.Process.Dispose();}catch{}
-    if(gameSession==session)gameSession=null;StopOverlay();
+    if(gameSession==session){gameSession=null;codeSession=null;}StopOverlay();
     if(musicPausedForGame){musicPausedForGame=false;if(!audio.Playing&&!updateClosed)audio.Toggle();}
     for(int id=1;id<=GameRuntime.GameCount;id++)GameRuntime.ReleaseLock(GameRuntime.DataFolderFor(id));
     if(reason.Length==0&&restartNow)game=sessionGame; // overlay Restart starts the same game again, whatever card is chosen on screen now
@@ -857,8 +896,11 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     page.Children.Add(new Border{Child=pickRow,Padding=new Thickness(14,12,14,12),Margin=new Thickness(0,4,0,10),Background=Ink("#163B54"),BorderBrush=Ink("#8BEFFF"),BorderThickness=new Thickness(2),CornerRadius=new CornerRadius(8)});
     if(runtimeLoadFailed){page.Children.Add(Label("Saved game settings could not be read. They have not been overwritten; open Help.",SetTitleSize));page.Children.Add(SetButton("Open Help",delegate{Navigate("Help");}));return;}
     bool running=GameRunning;
+    Action rollRefresh=null;   // greys the quick roll row while the movement is the original one, as the in-game panel does
     var state=Label(running?RunningName+" is running. Most settings can be changed again when the game is closed.":playCheck.Ready?"Settings of "+Kind.Name+", in alphabetical order. A change is saved at once and applies the next time you press Play.":"This game is not ready to play yet: "+playCheck.Problem+" Only the settings that every game program has are listed below.",SetHelpSize,playCheck.Ready||running?"#8BEFFF":"#FFCE83");
     System.Windows.Automation.AutomationProperties.SetAutomationId(state,"settings-state");page.Children.Add(state);
+    {var builtGame=BuildCore.Game(Kind.Id);string builderLine=builtGame==null?"":BuildCore.BuilderLine(BuildCore.ReadMarker(BuildFolderOf(builtGame)),builtGame,BuildToolsNow(builtGame).KitVersion,playCheck.Hash);   // which builder made the game program in use, and which builder this Flutter Deck has
+      if(builderLine.Length>0){var builder=Label(builderLine,SetHelpSize,"#AEC8DB");System.Windows.Automation.AutomationProperties.SetAutomationId(builder,"settings-build");page.Children.Add(builder);}}
     if(!playCheck.Ready&&!running)page.Children.Add(SetButton("Open game setup",delegate{Navigate("Preflight");}));
     var rows=new List<KeyValuePair<string,Action<string>>>();
     Action<string,Action<string>> add=delegate(string title,Action<string> build){rows.Add(new KeyValuePair<string,Action<string>>(title,build));};
@@ -891,7 +933,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     if(playCheck.HasMovementOption)add("Smooth movement",delegate(string t){
       var smooth=Toggle(!runtime.OriginalMovement);
       System.Windows.Automation.AutomationProperties.SetName(smooth,"Smooth movement");smooth.IsEnabled=!running;
-      RoutedEventHandler smoothChanged=delegate{runtime.OriginalMovement=smooth.IsChecked!=true;SaveRuntime();};smooth.Checked+=smoothChanged;smooth.Unchecked+=smoothChanged;
+      RoutedEventHandler smoothChanged=delegate{runtime.OriginalMovement=smooth.IsChecked!=true;SaveRuntime();if(rollRefresh!=null)rollRefresh();};smooth.Checked+=smoothChanged;smooth.Unchecked+=smoothChanged;
       SettingRow(t,"On: Mega Man eases into a run and eases to a stop (about a tenth of a second each way) instead of starting and stopping at full speed. Top speed, jumping and firing are the same as the original. Off: the original instant start and stop. Applies the next time you press Play.",smooth);});
     if(playCheck.HasRumble){
       add("Controller vibration",delegate(string t){
@@ -958,7 +1000,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
       add("Third-person controls",delegate(string t){
         var tp=Toggle(!runtime.OriginalControls);
         System.Windows.Automation.AutomationProperties.SetName(tp,"Third-person controls");tp.IsEnabled=!running;
-        RoutedEventHandler tpChanged=delegate{runtime.OriginalControls=tp.IsChecked!=true;SaveRuntime();};tp.Checked+=tpChanged;tp.Unchecked+=tpChanged;
+        RoutedEventHandler tpChanged=delegate{runtime.OriginalControls=tp.IsChecked!=true;SaveRuntime();if(rollRefresh!=null)rollRefresh();};tp.Checked+=tpChanged;tp.Unchecked+=tpChanged;
         SettingRow(t,"A free camera on the right stick; you move relative to the camera. They switch on the first time you use a connected Xbox or PlayStation 5 pad; until then, or with only a keyboard, the original controls are used. Left stick: run in any direction, relative to the camera. Right stick: look around, horizontal and vertical. The left trigger: aim where the camera looks and strafe. Right trigger: lock-on (see Target lock-on). Right stick click: put the camera back behind Mega Man. Off: the original turn-and-walk controls. Applies the next time you press Play.",tp);});
       if(playCheck.HasLookOptions){
         add("Camera speed",delegate(string t){
@@ -1019,7 +1061,36 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
       var stg=Toggle(!runtime.NoSkateToggle);
       System.Windows.Automation.AutomationProperties.SetName(stg,"Hold Circle to start skates, press Circle to stop");System.Windows.Automation.AutomationProperties.SetAutomationId(stg,"skate-toggle");stg.IsEnabled=!running;
       RoutedEventHandler stgChanged=delegate{runtime.NoSkateToggle=stg.IsChecked!=true;SaveRuntime();};stg.Checked+=stgChanged;stg.Unchecked+=stgChanged;
-      SettingRow(t,"On (the default): hold Circle to put the skates on, then let go and keep skating. Press Circle again to take them off. Off: the skates last only while Circle is held. Needs smooth movement; with the original movement nothing changes. Applies the next time you press Play.",stg);});
+      SettingRow(t,"On (the default): hold Circle to put the skates on, then let go and keep skating. Press Circle again to take them off. Off: the skates last only while Circle is held. "+(playCheck.HasRoll?"While quick roll is on, a Circle hold starts the skates only after the walk switch is pressed. ":"")+"Needs smooth movement; with the original movement nothing changes. Applies the next time you press Play.",stg);});
+    if(playCheck.HasRoll)add("Quick roll: tap Circle",delegate(string t){
+      var qr=Toggle(runtime.Roll);
+      System.Windows.Automation.AutomationProperties.SetName(qr,"Quick roll: tap Circle");System.Windows.Automation.AutomationProperties.SetAutomationId(qr,"roll");rollRefresh=delegate{qr.IsEnabled=!running&&OverlayGameSettings.RollUsable(runtime,playCheck);};rollRefresh();
+      RoutedEventHandler qrChanged=delegate{runtime.Roll=qr.IsChecked==true;SaveRuntime();};qr.Checked+=qrChanged;qr.Unchecked+=qrChanged;
+      SettingRow(t,"Off by default. On: a quick tap of Circle rolls Mega Man out of the way, and a hit that lands in the first moment of the roll does no harm. While it is on, holding Circle does NOT put the Jet Skates on until you press the walk switch: on a gamepad the left stick press (you can move it on the Gamepad buttons screen). The walk switch is off every time the game starts. A press of Circle while Mega Man is walking rolls at once, so stop first to talk or to use a door or a car. The keyboard has no walk switch, so with a keyboard alone the skates cannot be started while quick roll is on. Needs smooth movement; with the original movement nothing changes. Applies the next time you press Play.",qr);});
+    if(playCheck.HasShotAim)add("Locked shots aim at the target",delegate(string t){
+      var sa=Toggle(!runtime.NoShotAim);
+      System.Windows.Automation.AutomationProperties.SetName(sa,"Locked shots aim at the target");System.Windows.Automation.AutomationProperties.SetAutomationId(sa,"shot-aim");sa.IsEnabled=!running;
+      RoutedEventHandler saChanged=delegate{runtime.NoShotAim=sa.IsChecked!=true;SaveRuntime();};sa.Checked+=saChanged;sa.Unchecked+=saChanged;
+      SettingRow(t,"On (the default): a shot you fire while locked on starts out pointed straight at its target, so shots at a target high above you can hit. Off: the shot flies level and turns toward the target slowly, as in the original game. It matters only for shots fired while locked on a target, which needs the third-person controls and the target lock-on. Applies the next time you press Play.",sa);});
+    if(playCheck.HasLockHealth)add("Target switch skips people and signs",delegate(string t){
+      var lkh=Toggle(!runtime.NoLockHealth);
+      System.Windows.Automation.AutomationProperties.SetName(lkh,"Target switch skips people and signs");System.Windows.Automation.AutomationProperties.SetAutomationId(lkh,"lock-health");lkh.IsEnabled=!running;
+      RoutedEventHandler lkhChanged=delegate{runtime.NoLockHealth=lkh.IsChecked!=true;SaveRuntime();};lkh.Checked+=lkhChanged;lkh.Unchecked+=lkhChanged;
+      SettingRow(t,"On (the default): flicking the right stick to the next target takes only things that have health, so most town people, signs and destroyed enemies are left out. The first target is always the game's own choice, so a person can still be locked now and then. Off: the older fixed list is used. Needs the third-person controls, the target lock-on, flick to switch target and a gamepad. Applies the next time you press Play.",lkh);});
+    if(playCheck.HasDiagnostics)add("Diagnostics recording",delegate(string t){
+      var dgn=Toggle(!runtime.NoDiagnostics);
+      System.Windows.Automation.AutomationProperties.SetName(dgn,"Diagnostics recording");System.Windows.Automation.AutomationProperties.SetAutomationId(dgn,"diagnostics");dgn.IsEnabled=!running;
+      RoutedEventHandler dgnChanged=delegate{runtime.NoDiagnostics=dgn.IsChecked!=true;runtime.DiagnosticsNoticeSeen=true;SaveRuntime();};   /* using the switch is a choice: the first-Play notice is not shown after it */dgn.Checked+=dgnChanged;dgn.Unchecked+=dgnChanged;
+      // The big notice can be read again from this row. Its answer is the same choice as the switch.
+      var dgnRead=SetButton("Read the notice again",delegate{if(GameRunning||diagnosticsNoticeOpen)return;var readFor=runtime;bool? again;diagnosticsNoticeOpen=true;try{again=ShowDiagnosticsNotice(true,!readFor.NoDiagnostics);}finally{diagnosticsNoticeOpen=false;}if(readFor!=runtime||GameRunning||!GameRuntime.DiagnosticsNoticeApply(readFor,again))return;SaveRuntime();if(dgn.IsLoaded)dgn.IsChecked=again==true;else Render();});   // Esc or Alt+F4: no answer, nothing changes. The page may have been drawn again meanwhile: then it is drawn once more from the saved choice
+      System.Windows.Automation.AutomationProperties.SetAutomationId(dgnRead,"diagnostics-read");dgnRead.IsEnabled=!running;dgnRead.Margin=new Thickness(0,8,0,0);dgnRead.HorizontalAlignment=HorizontalAlignment.Left;
+      var dgnBoth=new StackPanel();dgnBoth.Children.Add(dgn);dgnBoth.Children.Add(dgnRead);
+      SettingRow(t,"On (the default): while you play, the game keeps a record of the last 5 minutes on this PC, so a fault can be looked at afterwards. The record holds the game's memory, its log and the buttons you press. Press F12 in the game (the screenshot key) to keep the record around that moment. The record is written to the game's sessions folder on this PC and is never sent anywhere. It can use up to about 4 GB of disk space; the oldest records are removed first. Off: no new record is written; records already written stay on this PC until you delete them. Applies the next time you press Play.",dgnBoth);});
+    {int guideTopics=GameRuntime.GuideTopicsFor(playCheck,GuideBuilderNewer());
+      if(guideTopics!=0)add("How to use the new features",delegate(string t){
+        var open=SetButton("Open the guide",delegate{if(diagnosticsNoticeOpen||GameRunning)return;var guideFor=runtime;int guideKit=GuideBuilderKit();diagnosticsNoticeOpen=true;try{ShowGuide(guideTopics,false);}finally{diagnosticsNoticeOpen=false;}if(guideFor==runtime){GameRuntime.GuideShown(guideFor,guideTopics,guideKit);SaveRuntime();}});   // a notice is modal and holds the Play guard, so it is not opened while a game runs (a Restart from the in-game menu would be lost)
+        System.Windows.Automation.AutomationProperties.SetAutomationId(open,"feature-guide-open");open.IsEnabled=!running;
+        SettingRow(t,"Short steps for the new features of this game that work in a way you may not expect: the quick roll with the walk switch and the Jet Skates, cheat codes, Teleport, lock-on, and when to build the game again. Only the features your game program has are listed. The guide is also shown once before Play.",open);});}
     if(playCheck.HasPadMap)add("Gamepad buttons",delegate(string t){SettingRow(t,"Choose what each button of an Xbox or PlayStation 5 pad does in the game. Button changes work with the original controls and with the third-person controls. The same screen has the stick dead zone of the third-person controls. Applies the next time the game starts.",SetButton("Edit gamepad buttons",delegate{if(!padDirty)padDraft=null;Navigate("Gamepad");}));});
     if(!playCheck.HasPadMap)add("Gamepad buttons",delegate(string t){SettingRow(t,game==1?"Xbox and PlayStation 5 pads work. Changing what each pad button does needs the Mega Man Legends game program to be set up (see Game setup and readiness); then the editor opens from here.":"Xbox and PlayStation 5 pads work with their usual buttons. Changing what each pad button does: coming soon for this game.",null);});
     add("Keyboard keys",delegate(string t){SettingRow(t,"Which keyboard key stands for each button of the game's pad. The list of keys is at the bottom of the game setup screen. A gamepad also works.",SetButton("Edit keys",delegate{Navigate("Preflight");}));});
@@ -1042,6 +1113,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
   }
   // ---- gamepad map editor (SPEC-padmap.md). Edits stay in padDraft until "Save gamepad buttons"; nothing else writes the file. ----
   void NeedPadDraft(){if(padDraft==null||!String.Equals(padDraftFor,PadData,StringComparison.OrdinalIgnoreCase))LoadPadDraft();}
+  bool padDraftNamesWalk(){for(int b=0;b<PadMap.ButtonCount;b++){uint? v=padDraft.Get(b);if(v.HasValue&&(v.Value&PadMap.Walk)!=0)return true;}return false;}
   void LoadPadDraft(){padDirty=false;padNote="";padDraftFor=PadData;try{padDraft=PadMap.Load(GameRuntime.PadMapPath(PadData));padLoadFailed=false;}catch{padDraft=PadMap.Defaults();padLoadFailed=true;}}
   // The only place the gamepad map is written.
   void SavePadDraft(){
@@ -1102,8 +1174,11 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
   void RenderPadEditor(){
     NeedPadDraft();heading.Text="Gamepad buttons: "+GameRuntime.Game(1).Name;
     bool tps=!runtimes[0].OriginalControls;
+    bool walk=game==1&&playCheck.HasRoll;padDraft.WalkKnown=walk;   // the walk switch exists only in a game program that has the quick roll (game contract 2.41)
     page.Children.Add(Label("Choose what each button of your Xbox or PlayStation 5 pad does in Mega Man Legends. Each line names the Xbox button first and the PlayStation 5 button in the same place second. \"Default\" keeps what the game does without changes. Changes are kept only when you press Save gamepad buttons, and they apply the next time the game starts (Play, or Restart in the in-game menu). The keyboard keys are not changed here.",16,"#AEC8DB"));
     page.Children.Add(Label(tps?"Third-person controls are on (Settings), so the defaults shown are theirs: the left trigger aims. Camera behind Mega Man and Aim work only with the third-person controls.":"Third-person controls are off (Settings), so the defaults shown are the original controls: the left trigger gives L2. Camera behind Mega Man and Aim do nothing with the original controls.",16,"#AEC8DB"));
+    if(walk)page.Children.Add(Label("Your game program has the quick roll. Its walk switch (default: press the left stick) decides whether holding Circle starts the Jet Skates while the quick roll is on: press it once to allow the hold, press it again to stop. It is off every time the game starts. It does nothing when the quick roll is off.",16,"#AEC8DB"));
+    if(!walk&&padDraftNamesWalk())page.Children.Add(Label("The saved gamepad map names the walk switch (WALK), which your game program does not have. The game skips that line. Saving keeps it.",16,"#FFCE83"));
     if(padLoadFailed)page.Children.Add(Label("The saved gamepad map could not be read, so the defaults are shown. Saving replaces it; the old file is kept beside it with .bak added.",16,"#FFCE83"));
     if(padDraft.NotUnderstood>0)page.Children.Add(Label(padDraft.NotUnderstood+" line(s) in the saved gamepad map are not understood by the game, which skips them. Saving writes the buttons shown here. The file you had before the first save is kept beside it as pad-map.txt.before-editor, and the last one as pad-map.txt.bak.",16,"#FFCE83"));
     if(padDraft.LookSensitivity.HasValue||padDraft.LookInvert.HasValue)page.Children.Add(Label("The saved gamepad map also sets the camera speed or the camera invert. The camera settings on the Settings screen win over those lines. Saving keeps them.",16,"#AEC8DB"));
@@ -1114,14 +1189,15 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     var status=Label(padNote.Length>0?padNote:padDirty?"Unsaved gamepad changes.":"These are the saved gamepad buttons.",16,"#8BEFFF");System.Windows.Automation.AutomationProperties.SetAutomationId(status,"gamepad-status");page.Children.Add(status);
     for(int each=0;each<PadMap.ButtonCount;each++){
       int button=each;uint? set=padDraft.Get(button);
-      var list=new ComboBox();list.Items.Add("Default: "+PadMap.Describe(PadMap.Default(button,tps)));
-      foreach(string a in PadMap.Actions)list.Items.Add(PadMap.ActionLabel(a));
+      var list=new ComboBox();list.Items.Add("Default: "+PadMap.Describe(PadMap.Default(button,tps,walk)));
+      string[] offered=PadMap.ActionsFor(walk);
+      foreach(string a in offered)list.Items.Add(PadMap.ActionLabel(a));
       int at=0;
-      if(set.HasValue){int single=-1;for(int i=0;i<PadMap.Actions.Length;i++)if(PadMap.Bit(PadMap.Actions[i])==set.Value){single=i;break;}
+      if(set.HasValue){int single=-1;for(int i=0;i<offered.Length;i++)if(PadMap.Bit(offered[i])==set.Value){single=i;break;}
         if(single>=0)at=single+1;else{list.Items.Add(PadMap.Describe(set.Value));at=list.Items.Count-1;}}
       list.SelectedIndex=at;list.FontSize=16;list.VerticalAlignment=VerticalAlignment.Center;
       System.Windows.Automation.AutomationProperties.SetName(list,"Action for "+PadMap.ButtonLabel(button));System.Windows.Automation.AutomationProperties.SetAutomationId(list,"gamepad-"+PadMap.Buttons[button]);
-      list.SelectionChanged+=delegate{int i=list.SelectedIndex;if(i<0||i>PadMap.Actions.Length)return;uint? want=i==0?(uint?)null:PadMap.Bit(PadMap.Actions[i-1]);if(want==padDraft.Get(button))return;padDraft.Set(button,want);padDirty=true;padNote="";Dispatcher.BeginInvoke(new Action(Render));};
+      list.SelectionChanged+=delegate{int i=list.SelectedIndex;if(i<0||i>offered.Length)return;uint? want=i==0?(uint?)null:PadMap.Bit(offered[i-1]);if(want==padDraft.Get(button))return;padDraft.Set(button,want);padDirty=true;padNote="";Dispatcher.BeginInvoke(new Action(Render));};
       Row(PadMap.ButtonLabel(button),"Now: "+PadMap.Describe(padDraft.Effective(button,tps))+(set.HasValue?"":" (default)"),list);
     }
     Button save=null,discard=null;
@@ -1132,7 +1208,7 @@ public partial class Deck : Window { // the Library screen is in DeckLibrary.cs
     var actions=new Grid();
     save=Control("Save gamepad buttons",delegate{SavePadDraft();Render();});save.IsEnabled=padDirty;
     discard=Control("Discard gamepad changes",delegate{LoadPadDraft();padNote="Changes discarded.";Render();});discard.IsEnabled=padDirty;
-    var defaults=Control("Use the default buttons",delegate{var fresh=PadMap.Defaults();fresh.LookSensitivity=padDraft.LookSensitivity;fresh.LookInvert=padDraft.LookInvert;padDraft=fresh;padDirty=true;padNote="Default buttons and the default dead zone shown. Press Save gamepad buttons to keep them.";Render();});
+    var defaults=Control("Use the default buttons",delegate{var fresh=PadMap.Defaults(walk);fresh.LookSensitivity=padDraft.LookSensitivity;fresh.LookInvert=padDraft.LookInvert;padDraft=fresh;padDirty=true;padNote="Default buttons and the default dead zone shown. Press Save gamepad buttons to keep them.";Render();});
     actions.Children.Add(save);actions.Children.Add(discard);actions.Children.Add(defaults);LayoutToolbar(actions);page.Children.Add(actions);
     var back=Control("Back to Settings",delegate{Navigate("Settings");});page.Children.Add(back);
   }

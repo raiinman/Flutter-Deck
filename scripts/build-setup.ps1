@@ -6,21 +6,21 @@
 # embeddable package for Windows 64-bit, unchanged) and zig.zip (the official Zig package for x86_64 Windows, unchanged).
 # The tools are not in this repository; pass their folder on this PC. Python and Zig are not trimmed (developer, 2026-11-20).
 param([string]$LauncherPath='',[Parameter(Mandatory=$true)][string]$Tools,[switch]$AnyToolZips)
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
-if(-not $LauncherPath){$LauncherPath=Join-Path $Here 'FlutterDeck.exe'}
+Set-Location $FdSrc
+if(-not $LauncherPath){$LauncherPath=Join-Path $FdSrc 'FlutterDeck.exe'}
 # Only a public build may go into an installer (developer, 2026-11-20): its launcher shows "Play with a friend..." greyed out. A public build carries
 # the mark below (an assembly attribute compiled only with ..\scripts\build.ps1 -PublicV1); a launcher without it is refused, whoever runs this script.
 if(Test-Path -LiteralPath $LauncherPath -PathType Leaf){$lb=[IO.File]::ReadAllBytes($LauncherPath);$mark=[byte[]](0x12)+[Text.Encoding]::ASCII.GetBytes('FlutterDeckEdition')+[byte[]](0x09)+[Text.Encoding]::ASCII.GetBytes('public-v1');$found=$false;for($i=0;$i -le $lb.Length-$mark.Length -and -not $found;$i++){if($lb[$i] -eq $mark[0]){$found=$true;for($j=1;$j -lt $mark.Length;$j++){if($lb[$i+$j] -ne $mark[$j]){$found=$false;break}}}};if(-not $found){throw 'This launcher is not a public build. Build it with ..\scripts\build.ps1 -PublicV1 (..\scripts\release.ps1 does that) and run this again.'}}
-foreach($f in @($LauncherPath,'assets\FlutterDeck-OriginalLoop.wav','..\LICENSE','..\NOTICE.md','assets\FlutterDeck-DawnLaunch.wav','assets\FlutterDeck-SkywayRun.wav','assets\FlutterDeck.ico','builder-notices\NOTICES.txt','builder-notices\ZIG-THIRD-PARTY-NOTICES.txt','builder-notices\PYTHON-THIRD-PARTY-NOTICES.txt')){if(-not (Test-Path -LiteralPath $f)){throw "Missing $f"}}
+foreach($f in @($LauncherPath,'assets\FlutterDeck-OriginalLoop.wav','..\LICENSE','..\NOTICE.md','assets\FlutterDeck-DawnLaunch.wav','assets\FlutterDeck-SkywayRun.wav','codes\memory-codes-list.txt','assets\FlutterDeck.ico','builder-notices\NOTICES.txt','builder-notices\ZIG-THIRD-PARTY-NOTICES.txt','builder-notices\PYTHON-THIRD-PARTY-NOTICES.txt')){if(-not (Test-Path -LiteralPath $f)){throw "Missing $f"}}
 # ---- the build tools ----
 if(-not (Test-Path -LiteralPath $Tools -PathType Container)){throw "The tools folder was not found: $Tools"}
 $Tools=(Resolve-Path -LiteralPath $Tools).Path
 Add-Type -AssemblyName System.IO.Compression,System.IO.Compression.FileSystem
 $games=@(@{Folder='kit';Game='Mega Man Legends (USA) SLUS-00603'},@{Folder='kit2';Game='Mega Man Legends 2 (USA) SLUS-01140'},@{Folder='kit3';Game='The Misadventures of Tron Bonne (USA) SLUS-00896'})
-$out=Join-Path $Here '.dream-loop\setup'
+$out=Join-Path $FdSrc '.dream-loop\setup'
 New-Item -ItemType Directory -Force $out | Out-Null
 $kitZips=@()
 foreach($g in $games){
@@ -71,9 +71,9 @@ $sources=@('Setup.cs','InstallCore.cs','Updater.cs','DeckPaths.cs')
 $small=Join-Path $out 'uninstaller.exe'
 & "$fx\csc.exe" @common "/out:$small" @sources
 if($LASTEXITCODE -ne 0){throw 'Uninstaller compilation failed'}
-# Resource order must match Installer.Payload in InstallCore.cs: P0 launcher, P1 loop, P2 LICENSE, P3 NOTICE, P4 and P5 the two newer loops.
+# Resource order must match Installer.Payload in InstallCore.cs: P0 launcher, P1 loop, P2 LICENSE, P3 NOTICE, P4 and P5 the two newer loops, P6 the shipped cheat-code list.
 # Resource names of the tools must match SetupPayload in Setup.cs.
-& "$fx\csc.exe" @common "/out:$exe" "/resource:$LauncherPath,P0" /resource:assets\FlutterDeck-OriginalLoop.wav,P1 /resource:..\LICENSE,P2 /resource:..\NOTICE.md,P3 /resource:assets\FlutterDeck-DawnLaunch.wav,P4 /resource:assets\FlutterDeck-SkywayRun.wav,P5 "/resource:$small,Uninstaller" "/resource:$($kitZips[0]),ToolKit1" "/resource:$($kitZips[1]),ToolKit2" "/resource:$($kitZips[2]),ToolKit3" "/resource:$py,ToolPython" "/resource:$zig,ToolZig" /resource:builder-notices\NOTICES.txt,ToolNotices /resource:builder-notices\ZIG-THIRD-PARTY-NOTICES.txt,ToolZigNotices /resource:builder-notices\PYTHON-THIRD-PARTY-NOTICES.txt,ToolPythonNotices @sources
+& "$fx\csc.exe" @common "/out:$exe" "/resource:$LauncherPath,P0" /resource:assets\FlutterDeck-OriginalLoop.wav,P1 /resource:..\LICENSE,P2 /resource:..\NOTICE.md,P3 /resource:assets\FlutterDeck-DawnLaunch.wav,P4 /resource:assets\FlutterDeck-SkywayRun.wav,P5 /resource:codes\memory-codes-list.txt,P6 "/resource:$small,Uninstaller" "/resource:$($kitZips[0]),ToolKit1" "/resource:$($kitZips[1]),ToolKit2" "/resource:$($kitZips[2]),ToolKit3" "/resource:$py,ToolPython" "/resource:$zig,ToolZig" /resource:builder-notices\NOTICES.txt,ToolNotices /resource:builder-notices\ZIG-THIRD-PARTY-NOTICES.txt,ToolZigNotices /resource:builder-notices\PYTHON-THIRD-PARTY-NOTICES.txt,ToolPythonNotices @sources
 if($LASTEXITCODE -ne 0){throw 'Setup compilation failed'}
 foreach($f in $kitZips+$small){Remove-Item -LiteralPath $f -Force}
 "Built $exe ($((Get-Item $exe).Length) bytes) around launcher SHA-256 $((Get-FileHash -LiteralPath $LauncherPath).Hash)"

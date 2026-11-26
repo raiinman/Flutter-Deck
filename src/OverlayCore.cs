@@ -255,7 +255,8 @@ public static class OverlayLayout {
   // them, fill the names in here and add the matching button in GameOverlay.cs. Never guess a name.
   // PROPOSED 2026-11-22 (SPEC-overlay.md, "Live control of the game"): the game session will confirm the final identity word when it builds the channel.
   public const string LiveControl="live-control";
-  static readonly Dictionary<string,string> GameControls=new Dictionary<string,string>{{"pause",LiveControl},{"restart",null},{"fullscreen",LiveControl},{"volume",LiveControl},{"screenshot",LiveControl},{"speed",LiveControl}};
+  public const string CodesLive="codes-live";   // game contract 2.39: cheat codes that can be switched while the game runs
+  static readonly Dictionary<string,string> GameControls=new Dictionary<string,string>{{"pause",LiveControl},{"restart",null},{"fullscreen",LiveControl},{"volume",LiveControl},{"screenshot",LiveControl},{"speed",LiveControl},{"codes",CodesLive}};
   public static bool Offered(string control,OverlayFeatures features){
     string name;
     return features!=null&&GameControls.TryGetValue(control,out name)&&name!=null&&features.Has(name);
@@ -299,6 +300,12 @@ public sealed class GameSetting {
   public bool Ticked{get{return IsSwitch&&Value!=0;}}
 }
 
+// One cheat code on offer, as the launcher gives it: a name, whether it is on, and whether it can be switched (a greyed-out one says why in Hint).
+public sealed class GameCode {
+  public string Name="",Hint="";public bool On,Enabled=true;
+  public bool NeedsValue;public int Value=-1;public int Width=1;   // a code with "?" needs a value of Width hexadecimal digits (1 to 4) from the player; Value is -1 until it is picked
+}
+
 // One row of the pill's menus.
 public sealed class MenuItemSpec {
   public string Id,Label,Shortcut;public bool Arrow,Extra;
@@ -318,7 +325,7 @@ public static class OverlayMenus {
     switch(menu){
       case "Library":l.Add(I("lib-games","Game library"));l.Add(I("lib-folder","Choose game folder…"));l.Add(I("lib-return","Return to launcher"));break;
       case "Session":l.Add(I("ses-resume","Resume game"));l.Add(I("ses-restart","Restart session…"));l.Add(I("ses-stop","Stop session…"));
-        l.Add(X("ses-reload-keys","Reload key map"));l.Add(X("ses-status","Game status"));l.Add(new MenuItemSpec("ses-settings","Game settings…",null,true,true));break;
+        l.Add(X("ses-reload-keys","Reload key map"));l.Add(X("ses-status","Game status"));l.Add(new MenuItemSpec("ses-settings","Game settings…",null,true,true));l.Add(new MenuItemSpec("ses-codes","Cheat codes…",null,true,true));break;
       case "View":
         l.Add(new MenuItemSpec("view-fullscreen","Fullscreen","F11",false,false));l.Add(I("view-fit","Fit game to window"));l.Add(I("view-aspect","Preserve 4:3 aspect"));
         l.Add(I("view-perf","Performance overlay"));l.Add(I("view-status","Deck status bar"));l.Add(new MenuItemSpec("view-scale","UI scale…",null,true,false));

@@ -117,6 +117,11 @@ public sealed class OverlayHost {
   public Func<double> UiScale;public Action<int> StepUiScale;           // the launcher's own text size, steps of 10 percent
   // Game settings (2026-11-18): the play settings the game program offers, changed while it runs and used by the next start.
   // The overlay keeps no copy: the launcher owns the values and the file. Leave GameSettings or SetGameSetting null to hide the panel.
+  // Cheat codes (game contract 2.39; only when the game program reports "codes-live"). The launcher owns the list, the file the game watches
+  // and which codes are on; the overlay shows the rows and asks for one switch at a time. SetCode returns null when it worked, else a plain sentence.
+  public Func<IList<GameCode>> Codes;
+  public Func<int,bool,string> SetCode;
+  public Func<int,int,string> SetCodeValue;      // picks the digit (0 to 15) of a code that needs one, and switches the code on with it; null when it worked, else a plain sentence
   public Func<IList<GameSetting>> GameSettings;  // the settings on offer now, with their current values
   public Func<string,int,string> SetGameSetting; // setting id, new value -> "" when it is kept, or a line saying why not
   public Func<bool> GameSettingsPending;         // true when the next start would differ from the running game
@@ -170,6 +175,9 @@ public sealed class GameOverlay : IDisposable {
   readonly Dictionary<string,TextBlock> keyText=new Dictionary<string,TextBlock>();
   readonly Dictionary<string,Button> gsetRows=new Dictionary<string,Button>();Button gsetRestart;string gsetNote="";bool gsetPending;IList<GameSetting> gsetList=new List<GameSetting>();
   const string GsetPanel="Game settings";const double SettingRowH=26;
+  const string CodesPanel="Cheat codes";const double CodesMaxH=220;
+  readonly List<Button> codesRows=new List<Button>();string codesNote="";IList<GameCode> codesList=new List<GameCode>();TextBlock codesStatus;ScrollViewer codesScroll;Button lastRingTarget;bool ringScrolling;
+  readonly Dictionary<int,Button> codesValueBtn=new Dictionary<int,Button>();readonly Dictionary<int,TextBlock> codesValueText=new Dictionary<int,TextBlock>();readonly Dictionary<int,WrapPanel> codesPicker=new Dictionary<int,WrapPanel>();readonly Dictionary<int,string> codesPending=new Dictionary<int,string>();
   // keyboard control of the menus (only after the overlay key opened the overlay)
   bool navActive,navBring;int navLevel,navPill,navMain,navSub;long navStarted;Border navRing;readonly List<Button> pillList=new List<Button>();
   double fit=1;public double? TestScale; // fit: how much the overlay is shrunk to fit a small game picture (only ever smaller while it stays open)
@@ -319,6 +327,18 @@ public sealed class GameOverlay : IDisposable {
       AutomationProperties.SetAutomationId(gStatus,"gset-status");rowText["gset-status"]=gStatus;gRows.Children.Add(gStatus);
       var gPanel=MenuPanel(SubW,gRows);gPanel.Visibility=Visibility.Collapsed;subBoxes[GsetPanel]=gPanel;stage.Children.Add(gPanel);
     }
+    if(CodesOffered){
+      // Cheat codes: one row per code in a short scrolling list (a list can be long), then a line of status. Built from the list the launcher gives now.
+      var cRows=new StackPanel();IList<GameCode> offeredCodes=null;try{offeredCodes=host.Codes();}catch(Exception){}
+      if(offeredCodes!=null)for(int ci=0;ci<offeredCodes.Count;ci++)cRows.Children.Add(CodeRow(ci,offeredCodes[ci]));
+      codesScroll=new ScrollViewer{Content=cRows,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,MaxHeight=CodesMaxH,Focusable=false};
+      AutomationProperties.SetAutomationId(codesScroll,"codes-scroll");
+      codesScroll.ScrollChanged+=delegate(object so,ScrollChangedEventArgs se){try{if(!ringScrolling&&se.VerticalChange!=0)KeepHighlightInView();}catch(Exception){}};
+      var cRoot=new StackPanel();cRoot.Children.Add(codesScroll);
+      codesStatus=new TextBlock{Foreground=Amber,FontFamily=UiFont,FontSize=13,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(11,8,11,8)};
+      AutomationProperties.SetAutomationId(codesStatus,"codes-status");rowText["codes-status"]=codesStatus;cRoot.Children.Add(codesStatus);
+      var cPanel=MenuPanel(SubW,cRoot);cPanel.Visibility=Visibility.Collapsed;subBoxes[CodesPanel]=cPanel;stage.Children.Add(cPanel);
+    }
     menuBox=MenuPanel(MenuW,mainStack);menuBox.Visibility=Visibility.Collapsed;stage.Children.Add(menuBox);
     menuTab=new System.Windows.Shapes.Rectangle{Width=26,Height=3,Fill=Seam,RadiusX=1.5,RadiusY=1.5,Visibility=Visibility.Collapsed,IsHitTestVisible=false};stage.Children.Add(menuTab);
     noteText=new TextBlock{Foreground=Amber,FontFamily=UiFont,FontSize=13,TextWrapping=TextWrapping.Wrap};
@@ -352,6 +372,7 @@ public sealed class GameOverlay : IDisposable {
     a["ses-stop"]=OnStop;
     if(host.ApplyPicture!=null)a["view-preset"]=delegate{OpenSub("Picture preset");};
     if(host.GameSettings!=null&&host.SetGameSetting!=null)a["ses-settings"]=delegate{OpenSub(GsetPanel);};
+    if(CodesOffered)a["ses-codes"]=delegate{OpenSub(CodesPanel);};
     if(host.KeyDraft!=null&&host.EditKey!=null&&host.SaveKeys!=null)a["overlay-keys"]=BeginEditor;
     a["overlay-hotkey"]=BeginKeys;
     if(FullScreenOnlyWorks)a["overlay-fullscreen-only"]=ToggleFullScreenOnly; // greyed out until it works
@@ -443,6 +464,109 @@ public sealed class GameOverlay : IDisposable {
     rowText["gset-status"].Text=status;
   }
   public bool GameSettingsPending {get{return gsetPending;}}
+  bool CodesOffered{get{return host.Codes!=null&&host.SetCode!=null&&OverlayLayout.Offered("codes",features);}}
+  // A cheat code row: a tick column (a tick when the code is on) and its name. One click switches it; the launcher keeps the state and writes the file.
+  UIElement CodeRow(int index,GameCode gc){
+    string id="code-"+index;
+    var grid=new Grid{Margin=new Thickness(11,0,11,0)};
+    grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(25)});grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
+    var tick=new TextBlock{Text="\u2713",Foreground=Cyan,FontFamily=UiFont,FontSize=14,VerticalAlignment=VerticalAlignment.Center,Visibility=Visibility.Hidden};
+    AutomationProperties.SetAutomationId(tick,id+"-tick");tickText[id]=tick;grid.Children.Add(tick);
+    var label=new TextBlock{Text=gc.Name,Foreground=Cream,FontFamily=UiFont,FontSize=14,VerticalAlignment=VerticalAlignment.Center,TextTrimming=TextTrimming.CharacterEllipsis};
+    AutomationProperties.SetAutomationId(label,id+"-text");Grid.SetColumn(label,1);grid.Children.Add(label);rowText[id]=label;
+    var b=new Button{Content=grid,Height=SettingRowH,Margin=new Thickness(0,1,0,1),Focusable=false,Cursor=Cursors.Hand,Template=RowTemplate()};
+    AutomationProperties.SetAutomationId(b,id);AutomationProperties.SetName(b,gc.Name);
+    ToolTipService.SetShowOnDisabled(b,true);
+    int idx=index;b.Click+=delegate{try{ToggleCode(idx);}catch(Exception){}};
+    codesRows.Add(b);
+    if(!gc.NeedsValue)return b;
+    // A code with a "?": the name button switches it, a value button beside it opens a strip of the sixteen digits under the row.
+    var row=new Grid();row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});row.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
+    Grid.SetColumn(b,0);row.Children.Add(b);
+    var vt=new TextBlock{Text="pick \u25BE",Foreground=Chevron,FontFamily=UiFont,FontSize=13,VerticalAlignment=VerticalAlignment.Center,HorizontalAlignment=HorizontalAlignment.Center};
+    var vb=new Button{Content=vt,Height=SettingRowH,MinWidth=58,Margin=new Thickness(0,1,0,1),Focusable=false,Cursor=Cursors.Hand,Template=RowTemplate()};
+    AutomationProperties.SetAutomationId(vb,id+"-value");AutomationProperties.SetName(vb,gc.Name+": pick a value");
+    Grid.SetColumn(vb,1);row.Children.Add(vb);
+    var strip=new WrapPanel{Margin=new Thickness(25,0,4,4),Visibility=Visibility.Collapsed};AutomationProperties.SetAutomationId(strip,id+"-picker");
+    for(int d=0;d<16;d++){
+      string hx=d.ToString("X");int dd=d;
+      var pb=new Button{Content=new TextBlock{Text=hx,Foreground=Cream,FontFamily=UiFont,FontSize=14,HorizontalAlignment=HorizontalAlignment.Center},Width=26,Height=SettingRowH,Margin=new Thickness(1),Focusable=false,Cursor=Cursors.Hand,Template=RowTemplate()};
+      AutomationProperties.SetAutomationId(pb,id+"-pick-"+hx);AutomationProperties.SetName(pb,"Value "+hx);
+      pb.Click+=delegate{try{PickCodeValue(idx,dd);}catch(Exception){}};
+      strip.Children.Add(pb);
+    }
+    vb.Click+=delegate{try{ToggleCodePicker(idx);}catch(Exception){}};
+    codesValueText[index]=vt;codesPicker[index]=strip;codesValueBtn[index]=vb;
+    var cell=new StackPanel();cell.Children.Add(row);cell.Children.Add(strip);return cell;
+  }
+  // The player scrolled the list with the mouse wheel: if the highlighted row went out of sight, the highlight moves to the first row that is in sight, so Enter never acts on a row nobody can see.
+  void KeepHighlightInView(){
+    if(!navActive||navLevel!=2||openSub!=CodesPanel||codesScroll==null)return;
+    var s=SubButtons();Button cur=navSub>=0&&navSub<s.Count?s[navSub]:null;
+    if(cur!=null&&InCodesView(cur))return;
+    for(int i=0;i<s.Count;i++){if(s[i].IsEnabled&&InCodesView(s[i])){navSub=i;lastRingTarget=s[i];return;}}
+  }
+  bool InCodesView(Button b){
+    try{Point p=b.TransformToAncestor(codesScroll).Transform(new Point(0,0));return p.Y>=-1&&p.Y+b.ActualHeight<=codesScroll.ViewportHeight+1;}catch(Exception){return false;}
+  }
+  Button HoldNav(){return navActive&&navLevel==2&&openSub==CodesPanel?NavTarget():null;}
+  void RestoreNav(Button b){if(b==null)return;var s=SubButtons();int k=s.IndexOf(b);if(k>=0)navSub=k;}
+  void ToggleCodePicker(int index){
+    WrapPanel strip;if(!codesPicker.TryGetValue(index,out strip))return;
+    bool open=strip.Visibility!=Visibility.Visible;
+    Button held=HoldNav();
+    codesPending.Clear();
+    foreach(KeyValuePair<int,WrapPanel> kv in codesPicker)kv.Value.Visibility=Visibility.Collapsed;
+    if(open)strip.Visibility=Visibility.Visible;
+    codesNote=""; // a held digit was thrown away: the line that said which digit comes next no longer applies
+    RestoreNav(held);
+    Refresh();
+    if(held!=null){stage.UpdateLayout();KeepHighlightInView();Apply(lastGame,lastNow);} // a strip that opened above the highlight can push it out of sight: then the highlight moves to a row in sight
+  }
+  // A value of several digits is picked one digit at a time from the same strip (a code with "??" asks for two, with "????" for four).
+  void PickCodeValue(int index,int digit){
+    try{
+      if(index<0||index>=codesList.Count||!codesList[index].Enabled||host.SetCodeValue==null)return;
+      int width=Math.Max(1,Math.Min(4,codesList[index].Width));
+      string pend;codesPending.TryGetValue(index,out pend);pend=(pend??"")+digit.ToString("X");
+      if(pend.Length<width){codesPending[index]=pend;codesNote="Digit "+pend.Length+" of "+width+" picked. Pick digit "+(pend.Length+1)+".";Refresh();return;}
+      codesPending.Remove(index);
+      string problem=host.SetCodeValue(index,Convert.ToInt32(pend,16));
+      codesNote=problem??"";
+    }catch(Exception){codesNote="That value could not be set.";codesPending.Remove(index);}
+    WrapPanel strip;if(codesPicker.TryGetValue(index,out strip))strip.Visibility=Visibility.Collapsed;
+    if(navActive&&navLevel==2&&index<codesRows.Count){var s=SubButtons();int k=s.IndexOf(codesRows[index]);if(k>=0)navSub=k;} // the picker closed: the keyboard highlight goes back to the code
+    Refresh();
+  }
+  void ToggleCode(int index){
+    try{
+      if(index<0||index>=codesList.Count||!codesList[index].Enabled)return;
+      if(codesList[index].NeedsValue&&codesList[index].Value<0){
+        WrapPanel strip;Button held=HoldNav();
+        if(codesPicker.TryGetValue(index,out strip)){codesPending.Clear();foreach(KeyValuePair<int,WrapPanel> kv in codesPicker)kv.Value.Visibility=Visibility.Collapsed;strip.Visibility=Visibility.Visible;}
+        RestoreNav(held);
+        codesNote="Pick a value first.";Refresh();return;
+      }
+      string problem=host.SetCode(index,!codesList[index].On);
+      codesNote=problem??"";
+    }catch(Exception){codesNote="That code could not be switched.";}
+    Refresh();
+  }
+  // Brings the rows of the Cheat codes panel in line with the launcher's list. Only while that panel is open.
+  void RefreshCodes(){
+    IList<GameCode> list=null;try{list=host.Codes();}catch(Exception){}
+    if(list==null)list=new List<GameCode>();
+    codesList=list;
+    for(int i=0;i<list.Count&&i<codesRows.Count;i++){
+      GameCode gc=list[i];Button b=codesRows[i];string id="code-"+i;
+      bool usable=gc.Enabled&&(!gc.NeedsValue||host.SetCodeValue!=null);
+      b.IsEnabled=usable;b.ToolTip=gc.Hint.Length>0?gc.Hint:null;SetTick(id,gc.On);
+      AutomationProperties.SetName(b,gc.Name+(gc.On?": on":": off")+(gc.NeedsValue&&gc.Value>=0?", value "+gc.Value.ToString("X"+Math.Max(1,Math.Min(4,gc.Width))):"")+(gc.Hint.Length>0?" ("+gc.Hint+")":""));
+      Button vb;TextBlock vt;
+      if(gc.NeedsValue&&codesValueBtn.TryGetValue(i,out vb)&&codesValueText.TryGetValue(i,out vt)){vb.IsEnabled=usable;vb.ToolTip=gc.Hint.Length>0?gc.Hint:null;string pendText;int wd=Math.Max(1,Math.Min(4,gc.Width));vt.Text=(codesPending.TryGetValue(i,out pendText)?pendText.PadRight(wd,'_'):gc.Value<0?"pick":gc.Value.ToString("X"+wd))+" \u25BE";}
+    }
+    codesStatus.Text=codesNote.Length>0?codesNote:list.Count==0?"No codes yet. Put your list file (memory-codes-list.txt) in this game's data folder.":"Off stops a code; it does not undo what it changed. A change takes effect a moment after the game runs.";
+  }
   // The kit's menu row: transparent, with the lighter blue fill and edge on hover; dimmed when disabled.
   static ControlTemplate RowTemplate(){
     var t=new ControlTemplate(typeof(Button));
@@ -757,8 +881,15 @@ public sealed class GameOverlay : IDisposable {
   bool[] PillEnabled(){var a=new bool[pillList.Count];for(int i=0;i<a.Length;i++)a[i]=pillList[i].IsEnabled;return a;}
   List<Button> SubButtons(){
     var l=new List<Button>();Border box;
-    if(openSub!=null&&subBoxes.TryGetValue(openSub,out box)){var sp=box.Child as StackPanel;if(sp!=null)foreach(UIElement c in sp.Children){var b=c as Button;if(b!=null)l.Add(b);}}
+    if(openSub!=null&&subBoxes.TryGetValue(openSub,out box)){var sp=box.Child as StackPanel;if(sp!=null){if(openSub==CodesPanel)CollectButtons(sp,l);else foreach(UIElement c in sp.Children){var b=c as Button;if(b!=null)l.Add(b);}}}
     return l;
+  }
+  static void CollectButtons(DependencyObject d,List<Button> l){
+    foreach(object c in LogicalTreeHelper.GetChildren(d)){
+      var ue=c as UIElement;if(ue!=null&&ue.Visibility!=Visibility.Visible)continue;
+      var b=c as Button;if(b!=null){l.Add(b);continue;}
+      var dc=c as DependencyObject;if(dc!=null)CollectButtons(dc,l);
+    }
   }
   static bool[] EnabledOf(List<Button> l){var a=new bool[l.Count];for(int i=0;i<a.Length;i++)a[i]=l[i].IsEnabled;return a;}
   Button NavTarget(){
@@ -786,7 +917,7 @@ public sealed class GameOverlay : IDisposable {
   static void ClickButton(Button b){if(b!=null&&b.IsEnabled){try{b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));}catch(Exception){}}}
   int MainIndexOfOpenSub(){
     if(openSub==null)return navMain;
-    int i=Array.IndexOf(OverlayMenus.Names,openSub=="Picture preset"?"View":openSub==GsetPanel?"Session":openSub);return i<0?navMain:i;
+    int i=Array.IndexOf(OverlayMenus.Names,openSub=="Picture preset"?"View":(openSub==GsetPanel||openSub==CodesPanel)?"Session":openSub);return i<0?navMain:i;
   }
   void OpenNavMenu(){
     if(state.Mode==OverlayMode.Bar)state.OpenMenu(lastNow);
@@ -797,6 +928,7 @@ public sealed class GameOverlay : IDisposable {
   void EnterNavSub(){
     var s=SubButtons();int f=OverlayNav.Next(EnabledOf(s),-1,1);
     if(f>=0){navLevel=2;navSub=f;}
+    else if(navLevel==2){navLevel=1;navSub=-1;} // the panel that just opened has no row that works (an empty list): the highlight goes back to the menu, not to a stale row
   }
   void BackToMain(){navLevel=1;navMain=MainIndexOfOpenSub();OpenSub(OverlayMenus.Names[navMain]);}
   bool HandleNavKey(Key key){
@@ -844,7 +976,9 @@ public sealed class GameOverlay : IDisposable {
     if(b==null||!b.IsVisible){navRing.Visibility=Visibility.Collapsed;return;}
     try{
       stage.UpdateLayout();
+      if(codesScroll!=null&&openSub==CodesPanel&&b!=lastRingTarget){lastRingTarget=b;ringScrolling=true;try{b.BringIntoView();stage.UpdateLayout();}finally{ringScrolling=false;}} // the list scrolls to the highlighted row, once per move
       Point p=b.TransformToAncestor(stage).Transform(new Point(0,0));
+      if(codesScroll!=null&&openSub==CodesPanel&&codesRows.Contains(b)){Point sp=codesScroll.TransformToAncestor(stage).Transform(new Point(0,0));if(p.Y<sp.Y-1||p.Y+b.ActualHeight>sp.Y+codesScroll.ActualHeight+1){navRing.Visibility=Visibility.Collapsed;return;}} // a row scrolled out of sight has no ring
       navRing.Width=b.ActualWidth;navRing.Height=b.ActualHeight;Canvas.SetLeft(navRing,p.X);Canvas.SetTop(navRing,p.Y);navRing.Visibility=Visibility.Visible;
     }catch(Exception){navRing.Visibility=Visibility.Collapsed;}
   }
@@ -1057,7 +1191,8 @@ public sealed class GameOverlay : IDisposable {
       rowText["picture-status"].Text=host.PictureStatus==null?"Choose a picture preset.":host.PictureStatus();
     }
     if(menu&&openSub==GsetPanel&&subBoxes.ContainsKey(GsetPanel))RefreshGameSettings();
-    foreach(KeyValuePair<string,Button> kv in mainRows)SetSelected(kv.Value,menu&&(openSub==kv.Key||(kv.Key=="View"&&openSub=="Picture preset")||(kv.Key=="Session"&&openSub==GsetPanel)));
+    if(menu&&openSub==CodesPanel&&subBoxes.ContainsKey(CodesPanel))RefreshCodes();
+    foreach(KeyValuePair<string,Button> kv in mainRows)SetSelected(kv.Value,menu&&(openSub==kv.Key||(kv.Key=="View"&&openSub=="Picture preset")||(kv.Key=="Session"&&(openSub==GsetPanel||openSub==CodesPanel))));
     SetSelected(menuButton,menu);
     LayoutStage(menu,ed);
     AutomationProperties.SetName(menuBox,"Overlay menu");
@@ -1071,7 +1206,7 @@ public sealed class GameOverlay : IDisposable {
     foreach(KeyValuePair<string,Border> kv in subBoxes)kv.Value.Visibility=menu&&openSub==kv.Key?Visibility.Visible:Visibility.Collapsed;
     if(menu){
       Put(menuBox,mLeft,MenuTop,ref w,ref h);Canvas.SetLeft(menuTab,mLeft+18);Canvas.SetTop(menuTab,MenuTop-2);bottom=MenuTop+menuBox.DesiredSize.Height;
-      if(openSub!=null){int idx=openSub==GsetPanel?0:Array.IndexOf(OverlayMenus.Names,openSub=="Picture preset"?"View":openSub);Put(subBoxes[openSub],mLeft+MenuW+10,openSub==GsetPanel?MenuTop:MenuTop+8+idx*RowPitch,ref w,ref h);} // the settings panel is tall, so it starts level with the top of the menu
+      if(openSub!=null){bool tall=openSub==GsetPanel||openSub==CodesPanel;int idx=tall?0:Array.IndexOf(OverlayMenus.Names,openSub=="Picture preset"?"View":openSub);Put(subBoxes[openSub],mLeft+MenuW+10,tall?MenuTop:MenuTop+8+idx*RowPitch,ref w,ref h);} // the settings panel is tall, so it starts level with the top of the menu
     }
     if(ed){Put(editorBox,0,MenuTop,ref w,ref h);bottom=MenuTop+editorBox.DesiredSize.Height;}
     string note=Note;noteText.Text=note;

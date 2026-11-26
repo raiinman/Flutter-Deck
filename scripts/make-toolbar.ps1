@@ -1,10 +1,10 @@
 param([Parameter(Mandatory=$true)][string]$Sheet)
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 # Cuts the owner's Flutter Ship 20-state toolbar sheet into assets\toolbar\<symbol>-<state>.png and derives the play icons
 # the sheet lacks (see assets\TOOLBAR-PROVENANCE.md). The sheet itself is not stored in the repository.
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 Add-Type -AssemblyName System.Drawing
 $expected='3EAA22E17A163C63C3F8B442C2029906F94398949773257AC517CC1C12BB20FD'
 if((Get-FileHash -LiteralPath $Sheet).Hash -ne $expected){throw "Unexpected sheet (hash). This script cuts the owner's Flutter-Ship-20-State-Sheet.png, SHA-256 $expected"}
@@ -44,8 +44,8 @@ foreach($sym in 'pause','restart','stop','fullscreen','menu'){
     $x=[int][math]::Round(($b[0]+$b[2])/2-$W/2); $y=[int][math]::Round(($b[1]+$b[3])/2-$W/2)
     $rect=New-Object System.Drawing.Rectangle $x,$y,$W,$W
     $cut=$src.Clone($rect,[System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $cut.Save((Join-Path $Here "assets\toolbar\$sym-$st.png"),[System.Drawing.Imaging.ImageFormat]::Png)
-    if($sym -eq 'stop'){ $play=[ToolbarPlay]::FromStop($cut); $play.Save((Join-Path $Here "assets\toolbar\play-$st.png"),[System.Drawing.Imaging.ImageFormat]::Png); $play.Dispose(); $count++ }
+    $cut.Save((Join-Path $FdSrc "assets\toolbar\$sym-$st.png"),[System.Drawing.Imaging.ImageFormat]::Png)
+    if($sym -eq 'stop'){ $play=[ToolbarPlay]::FromStop($cut); $play.Save((Join-Path $FdSrc "assets\toolbar\play-$st.png"),[System.Drawing.Imaging.ImageFormat]::Png); $play.Dispose(); $count++ }
     $cut.Dispose(); $count++
   }
 }

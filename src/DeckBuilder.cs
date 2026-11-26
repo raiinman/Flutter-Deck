@@ -186,6 +186,8 @@ public partial class Deck {
       bool older=marker!=null&&marker.KitVersion<tools.KitVersion;
       string state=built?"A built game is on this PC"+(inUse?", and Flutter Deck starts it for "+g.Name+".":". Flutter Deck does not use it now.")+(marker!=null&&marker.KitVersion<g.OldestKit?" It was built by an older builder. Build it again: the new builder is safer with disc images that are not your own.":older?" A newer builder came with this Flutter Deck: build again to get its changes.":""):problem;
       var stateLine=BuildText(state,14,built?"#9BE8A8":"#AEC8DB");Id(stateLine,"build-state");p.Children.Add(stateLine);
+      string builtWith=built?BuildCore.BuiltWith(marker):"";string versions=(builtWith.Length>0?"Built with "+builtWith+". ":"")+(tools.KitVersion>0?"This Flutter Deck has builder version "+tools.KitVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)+".":"");
+      if(versions.Length>0){var versionLine=BuildText(versions,13,"#AEC8DB");Id(versionLine,"build-versions");p.Children.Add(versionLine);}
       if(built)p.Children.Add(BuildText("The built game is kept in "+BuildFolderOf(g)+". Removing Flutter Deck's settings does not remove it.",12,"#AEC8DB"));
       var row=new WrapPanel{Margin=new Thickness(-2,0,0,8)};
       row.Children.Add(LibButton(built?"Build again":"Build the game",BuildStart,"build-start",built?"Build the game again":"Build the game"));

@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 $s=Get-Content Program.cs -Raw
 foreach($g in @('MusicIcon("previous"','MusicIcon("play"','MusicIcon("next"','hit.SetValue(Border.BackgroundProperty,Brushes.Transparent)','FocusVisualStyle=null','play.IsEnabled=false','Control("",delegate{},true,"Play unavailable:')){if(-not $s.Contains($g)){throw "Missing icon behavior: $g"}}
 foreach($g in @('var caption=Label(name','Control("Play unavailable"','Control("Mix"','Control("Loop"','Control("Mute"','((TextBlock)playButton.Content)')){if($s.Contains($g)){throw "Unwanted visible label: $g"}}

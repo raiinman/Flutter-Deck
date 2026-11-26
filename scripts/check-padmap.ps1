@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 $fx="$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319"
 New-Item -ItemType Directory -Force .dream-loop | Out-Null
 & "$fx\csc.exe" /nologo /target:exe /out:.dream-loop\PadMapPureTest.exe PadMap.cs GameRuntime.cs LocalSetup.cs DeckPaths.cs ..\tests\PadMapPureTest.cs
@@ -44,11 +44,11 @@ int main(int argc, char **argv) {
     return 0;
 }
 '@
-$src=Join-Path $Here '.dream-loop\padmap_ref.c';$exe=Join-Path $Here '.dream-loop\padmap_ref.exe'
+$src=Join-Path $FdSrc '.dream-loop\padmap_ref.c';$exe=Join-Path $FdSrc '.dream-loop\padmap_ref.exe'
 [IO.File]::WriteAllText($src,$c)
 & $zig cc -O1 -I (Join-Path $kit 'runtime-core') -o $exe $src
 if($LASTEXITCODE -ne 0){throw 'The game reader harness did not compile'}
-$corpus=Join-Path $Here '.dream-loop\padmap-corpus'
+$corpus=Join-Path $FdSrc '.dream-loop\padmap-corpus'
 & .\.dream-loop\PadMapPureTest.exe corpus $corpus
 $files=@(Get-ChildItem -LiteralPath $corpus -File|Sort-Object Name|ForEach-Object{$_.FullName})
 $ref=@(& $exe @files);$ours=@(& .\.dream-loop\PadMapPureTest.exe dump @files)

@@ -1,12 +1,12 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 $fx="$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319"
 New-Item -ItemType Directory -Force .dream-loop | Out-Null
 & "$fx\csc.exe" /nologo /target:exe /out:.dream-loop\DiscFinderPureTest.exe DiscFinder.cs ..\tests\DiscFinderPureTest.cs LocalSetup.cs DeckPaths.cs
 if($LASTEXITCODE -ne 0){throw 'Disc finder test compile failed'}
-$t=Join-Path $Here ('.dream-loop\disc-'+[guid]::NewGuid().ToString('N').Substring(0,8))
+$t=Join-Path $FdSrc ('.dream-loop\disc-'+[guid]::NewGuid().ToString('N').Substring(0,8))
 try{
   & .\.dream-loop\DiscFinderPureTest.exe $t
   if($LASTEXITCODE -ne 0){throw 'Disc finder checks failed'}

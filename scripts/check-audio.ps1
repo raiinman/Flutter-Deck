@@ -1,10 +1,10 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 $fx="$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319"
-New-Item -ItemType Directory -Force (Join-Path $Here '.dream-loop') | Out-Null
-$out=Join-Path $Here '.dream-loop\AudioPureTest.exe'
+New-Item -ItemType Directory -Force (Join-Path $FdSrc '.dream-loop') | Out-Null
+$out=Join-Path $FdSrc '.dream-loop\AudioPureTest.exe'
 & "$fx\csc.exe" /nologo /target:exe /out:$out /reference:"$fx\WPF\PresentationCore.dll" /reference:"$fx\WPF\WindowsBase.dll" DeckAudio.cs ..\tests\AudioPureTest.cs
 if($LASTEXITCODE -ne 0){throw 'Audio helper compilation failed'}
 # Every bundled loop: 30.000 seconds, 44,100 Hz, real sample levels.
@@ -14,12 +14,12 @@ foreach($loop in $loops){
  if($LASTEXITCODE -ne 0){throw "Audio tests failed for $loop"}
 }
 # The two newer loops are rendered by LoopSynth.cs; the committed files must be exactly what it produces.
-$render=Join-Path $Here '.dream-loop\loops-check'
+$render=Join-Path $FdSrc '.dream-loop\loops-check'
 New-Item -ItemType Directory -Force $render | Out-Null
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Here '..\scripts\make-loops.ps1') -Folder $render | Out-Null
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $FdSrc '..\scripts\make-loops.ps1') -Folder $render | Out-Null
 if($LASTEXITCODE -ne 0){throw 'Loop synthesiser failed'}
 foreach($loop in 'FlutterDeck-DawnLaunch.wav','FlutterDeck-SkywayRun.wav'){
- if((Get-FileHash (Join-Path $Here "assets\$loop")).Hash -ne (Get-FileHash (Join-Path $render $loop)).Hash){throw "$loop is not what LoopSynth.cs renders"}
+ if((Get-FileHash (Join-Path $FdSrc "assets\$loop")).Hash -ne (Get-FileHash (Join-Path $render $loop)).Hash){throw "$loop is not what LoopSynth.cs renders"}
 }
 # The synthesiser reads no audio file: the loops come from the notes written in it and nothing else.
 $synth=Get-Content LoopSynth.cs -Raw

@@ -1,8 +1,8 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Add-Type -Path (Join-Path $Here 'DeckPaths.cs'),(Join-Path $Here 'LocalSetup.cs'),(Join-Path $Here 'Foundation.cs') -ReferencedAssemblies System.Xml,System.Core
-$t=Join-Path $Here ('.dream-loop\foundation-'+[guid]::NewGuid().ToString('N'))
+Add-Type -Path (Join-Path $FdSrc 'DeckPaths.cs'),(Join-Path $FdSrc 'LocalSetup.cs'),(Join-Path $FdSrc 'Foundation.cs') -ReferencedAssemblies System.Xml,System.Core
+$t=Join-Path $FdSrc ('.dream-loop\foundation-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory $t | Out-Null
 $p=Join-Path $t 'prefs.txt'
 $v=[LauncherPreferences]::Load($p)
@@ -66,7 +66,7 @@ try{
   foreach($no in @('relative\choices.txt','choices.txt',(Join-Path $t 'choices.xml'),'   ','C:choices.txt','\choices.txt','\\server\share\choices.txt','/choices.txt','C:/x/choices.txt')){[Environment]::SetEnvironmentVariable('FLUTTERDECK_CHOICES_FILE',$no,'Process');if([DeckChoices]::PathName -ne $real){throw "Override '$no' must be ignored"}}
   [Environment]::SetEnvironmentVariable('FLUTTERDECK_CHOICES_FILE',$cp,'Process');if([DeckChoices]::PathName -ne $cp){throw 'Override with a full .txt path'}
 }finally{[Environment]::SetEnvironmentVariable('FLUTTERDECK_CHOICES_FILE',$before,'Process')}
-$s=Get-Content (Join-Path $Here 'Program.cs') -Raw
+$s=Get-Content (Join-Path $FdSrc 'Program.cs') -Raw
 foreach($g in @(
  'choices=DeckChoices.Load(DeckChoices.PathName);audio.Muted=false;audio.Repeat=false;audio.Shuffle=false;audio.Volume=choices.Volume/100.0;',
  'Closing+=delegate{FlushChoices();audio.Dispose();',
@@ -82,6 +82,6 @@ foreach($g in @(
 if(([regex]::Matches($s,'choices\s*\.\s*MusicOn\s*=[^=]')).Count -ne 4 -or ([regex]::Matches($s,'\bchoices\s*=')).Count -ne 2 -or ([regex]::Matches($s,'choices\.Track=')).Count -ne 2 -or ([regex]::Matches($s,'audio\.Stop\(\);choices\.MusicOn=false;NoteChoices\(\);')).Count -ne 2){throw 'Music on/off must be set only by Play/Pause, the two Stop buttons and Reset'}
 if(([regex]::Matches($s,'DeckChoices\.Save\(')).Count -ne 1){throw 'Choices are saved in one place'}
 if($s -match 'featureChoices[^;]*DeckChoices|DeckChoices[^;]*featureChoices'){throw 'Feature preview choices are not saved'}
-$inst=Get-Content (Join-Path $Here 'InstallCore.cs') -Raw;if(-not $inst.Contains('"runtime.xml","choices.txt"')){throw 'Uninstall must remove choices.txt with the other settings'}
+$inst=Get-Content (Join-Path $FdSrc 'InstallCore.cs') -Raw;if(-not $inst.Contains('"runtime.xml","choices.txt"')){throw 'Uninstall must remove choices.txt with the other settings'}
 foreach($g in @('play.IsEnabled=false','RenderHelp()','SaveWindowPreferences()','ResetLauncherPreferences()')){if(-not $s.Contains($g)){throw "Foundation UI guard $g"}}
 'PASS: preference defaults/roundtrip/bounds/corruption, remembered choices (defaults, round trip, bounds, hand-made and damaged files, test-only location) and bounded allowlisted logs; UI source guards only: no window was opened and no real settings file was read or written.'

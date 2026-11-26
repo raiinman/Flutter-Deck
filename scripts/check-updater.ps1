@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 $fx="$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319"
 New-Item -ItemType Directory -Force .dream-loop | Out-Null
 & "$fx\csc.exe" /nologo /target:exe /out:.dream-loop\UpdaterPureTest.exe Updater.cs ..\tests\UpdaterPureTest.cs DeckPaths.cs
@@ -24,14 +24,14 @@ $a=if(Test-Path ..\.gitattributes){Get-Content ..\.gitattributes -Raw}else{''}
 if(-not $a.Contains('update/manifest.xml -text') -or -not $a.Contains('update/manifest.sig -text')){throw 'Signed files must be stored byte-exact (.gitattributes)'}
 # ..\scripts\release.ps1 loads the launcher's own acceptance code to test a manifest before it is written. That load must keep
 # working when Updater.cs gains a need for another file, so it is tried here on every run, in a process of its own.
-$load="Add-Type -Path '$Here\Updater.cs','$Here\DeckPaths.cs' -ReferencedAssemblies System.Xml -ErrorAction Stop; if([Updater]::Sequence -lt 1){exit 3}"
+$load="Add-Type -Path '$FdSrc\Updater.cs','$FdSrc\DeckPaths.cs' -ReferencedAssemblies System.Xml -ErrorAction Stop; if([Updater]::Sequence -lt 1){exit 3}"
 & powershell -NoProfile -ExecutionPolicy Bypass -Command $load | Out-Null
 if($LASTEXITCODE -ne 0){throw '..\scripts\release.ps1 could not load the updater code: Updater.cs needs a file that is not given to Add-Type'}
 $rel=Get-Content ..\scripts\release.ps1 -Raw
-if(-not $rel.Contains("Add-Type -Path (Join-Path `$Here 'Updater.cs'),(Join-Path `$Here 'DeckPaths.cs') -ReferencedAssemblies System.Xml")){throw '..\scripts\release.ps1 must load Updater.cs together with DeckPaths.cs'}
+if(-not $rel.Contains("Add-Type -Path (Join-Path `$FdSrc 'Updater.cs'),(Join-Path `$FdSrc 'DeckPaths.cs') -ReferencedAssemblies System.Xml")){throw '..\scripts\release.ps1 must load Updater.cs together with DeckPaths.cs'}
 if(Test-Path ..\update\manifest.xml){
-  Add-Type -Path (Join-Path $Here 'Updater.cs'),(Join-Path $Here 'DeckPaths.cs') -ReferencedAssemblies System.Xml -ErrorAction Stop
-  $info=[Updater]::Accept([IO.File]::ReadAllBytes("$Here\..\update\manifest.xml"),[Updater]::DecodeSignature([IO.File]::ReadAllBytes("$Here\..\update\manifest.sig")),[Updater]::PublicKey)
+  Add-Type -Path (Join-Path $FdSrc 'Updater.cs'),(Join-Path $FdSrc 'DeckPaths.cs') -ReferencedAssemblies System.Xml -ErrorAction Stop
+  $info=[Updater]::Accept([IO.File]::ReadAllBytes("$FdSrc\..\update\manifest.xml"),[Updater]::DecodeSignature([IO.File]::ReadAllBytes("$FdSrc\..\update\manifest.sig")),[Updater]::PublicKey)
   "Published manifest verifies: $($info.Version) (release $($info.Sequence))."
 }
 'PASS: updater pure tests; bounded, credential-free, no-redirect manifest fetch; signature before parse and again at install; fixed source and key; install has one click-driven caller; no simulated states. No network request made and no real launcher replaced by this check.'

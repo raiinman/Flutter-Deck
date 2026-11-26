@@ -26,7 +26,7 @@ public sealed class BuildProgress {
   public string StepWord="",Part="",StopWord="",StopReason="",DonePath="",Game="";
   public bool TrackDiffers,ZigUnproven,ChildrenNotTied;
 }
-public sealed class BuildMarker { public string State="",Exe="",ExeSha256="",Selftest="",Game=""; public bool HasGame; public int KitVersion; }
+public sealed class BuildMarker { public string State="",Exe="",ExeSha256="",Selftest="",Game="",Finished="";   /* Finished: the day the build ended, yyyy-MM-dd, or "" */ public bool HasGame; public int KitVersion; }
 
 public static class BuildCore {
   public const string MarkerName="rmx-kit-build.json",ToolsFileName="builder-tools.txt",BuilderFolder="builder";
@@ -245,9 +245,30 @@ public static class BuildCore {
       if(d.TryGetValue("selftest",out v))m.Selftest=v;
       if(d.TryGetValue("game",out v)){m.Game=v;m.HasGame=true;}
       if(d.TryGetValue("kit_version",out v))Int32.TryParse(v,NumberStyles.None,CultureInfo.InvariantCulture,out m.KitVersion);
+      if(d.TryGetValue("finished",out v)){var day=Regex.Match(v,"^([0-9]{4}-[0-9]{2}-[0-9]{2})($|[ T])");DateTime real;if(day.Success&&DateTime.TryParseExact(day.Groups[1].Value,"yyyy-MM-dd",CultureInfo.InvariantCulture,DateTimeStyles.None,out real))m.Finished=day.Groups[1].Value;}
       return m;
     }catch(Exception){return null;}
   }
+
+  // ---- what the player is told about the builder ----
+  // "builder version 23 on 2026-11-24" from the record of a build; "" when the record does not give the version.
+  public static string BuiltWith(BuildMarker m){return m==null||m.KitVersion<=0?"":"builder version "+m.KitVersion.ToString(CultureInfo.InvariantCulture)+(m.Finished.Length>0?" on "+m.Finished:"");}
+  // For a game's Settings page: which builder made the game program in use, and which builder this Flutter Deck has.
+  // The record describes the last build, not the program in use, so it is quoted only when the program in use is exactly the program the record names (same SHA-256).
+  // programHash: the hash of the program in use, "" when there is none. installedKit: 0 when the builder is not found.
+  public static string BuilderLine(BuildMarker m,BuildGame g,int installedKit,string programHash){
+    bool has=!String.IsNullOrEmpty(programHash);
+    bool mine=has&&MarkerIsFor(m,g)&&m.State=="ready"&&String.Equals(m.ExeSha256,programHash,StringComparison.OrdinalIgnoreCase);
+    string with=mine?BuiltWith(m):"";
+    string first=!has?"":with.Length>0?"Your game was built with "+with+".":mine?"Your game was built by Flutter Deck. Its record does not give the builder version.":m==null?"Flutter Deck has no record of building this game, so the builder version of the game program in use is not known.":"The game program in use is not the one Flutter Deck built, so its builder version is not known.";
+    string second=installedKit>0?"This Flutter Deck has builder version "+installedKit.ToString(CultureInfo.InvariantCulture)+".":"";
+    string third=with.Length>0&&installedKit>m.KitVersion?"Build the game again to get the newer builder's changes.":"";
+    var parts=new List<string>();foreach(string s in new[]{first,second,third})if(s.Length>0)parts.Add(s);
+    return String.Join(" ",parts.ToArray());
+  }
+
+  // True when the program in use is the one the record names (as in BuilderLine) and this Flutter Deck has a newer builder than the one that built it.
+  public static bool BuilderIsNewer(BuildMarker m,BuildGame g,int installedKit,string programHash){return !String.IsNullOrEmpty(programHash)&&MarkerIsFor(m,g)&&m.State=="ready"&&String.Equals(m.ExeSha256,programHash,StringComparison.OrdinalIgnoreCase)&&m.KitVersion>0&&installedKit>m.KitVersion;}
 
   // ---- may this built program start? ----
   public static string Sha256Of(string path){using(var sha=SHA256.Create())using(var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read))return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","");}

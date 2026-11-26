@@ -1,11 +1,11 @@
-# Builds the portable Flutter Deck zip from a built installer (developer, 2026-11-21). The zip holds what Setup installs: the launcher, its assets, LICENSE, NOTICE.md and the builder folder
+# Builds the portable Flutter Deck zip from a built installer (developer, 2026-11-21). The zip holds what Setup installs: the launcher, its assets, the shipped cheat-code list, LICENSE, NOTICE.md and the builder folder
 # (the three kits, Python, Zig and their notices), laid out by the installer's own code, so "Build my game..." works from the unzipped
 # folder. Left out: the uninstaller and builder\installed-files.txt (a portable copy is removed by deleting its folder).
 # Usage: ..\scripts\build-zip.ps1 -SetupPath <FlutterDeckSetup.exe built by ..\scripts\build-setup.ps1> -LauncherPath <the FlutterDeck.exe inside it> -OutZip <zip to write>
 # Run it in a new PowerShell process (..\scripts\release.ps1 does): it loads the installer program to use its code.
 param([Parameter(Mandatory=$true)][string]$SetupPath,[Parameter(Mandatory=$true)][string]$LauncherPath,[Parameter(Mandatory=$true)][string]$OutZip)
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
 $SetupPath=(Resolve-Path -LiteralPath $SetupPath).Path;$LauncherPath=(Resolve-Path -LiteralPath $LauncherPath).Path
 if(Test-Path -LiteralPath $OutZip){throw "The zip already exists: $OutZip"}
@@ -27,7 +27,7 @@ try{
   Remove-Item -LiteralPath (Join-Path $stage 'Uninstall Flutter Deck.exe') -Force
   Remove-Item -LiteralPath (Join-Path $stage 'builder\installed-files.txt') -Force
   if((Get-FileHash -LiteralPath (Join-Path $stage 'FlutterDeck.exe')).Hash -ne (Get-FileHash -LiteralPath $LauncherPath).Hash){throw 'The launcher inside the installer is not the given launcher file.'}
-  foreach($need in 'assets\FlutterDeck-OriginalLoop.wav','LICENSE','NOTICE.md','builder\kit\build_game.py','builder\kit2\build_game.py','builder\kit3\build_game.py','builder\python\python.exe','builder\zig\zig.exe','builder\NOTICES.txt','builder\zig\THIRD-PARTY-NOTICES.txt','builder\python\THIRD-PARTY-NOTICES.txt'){if(-not (Test-Path -LiteralPath (Join-Path $stage $need))){throw "Missing in the zip folder: $need"}}
+  foreach($need in 'assets\FlutterDeck-OriginalLoop.wav','codes\memory-codes-list.txt','LICENSE','NOTICE.md','builder\kit\build_game.py','builder\kit2\build_game.py','builder\kit3\build_game.py','builder\python\python.exe','builder\zig\zig.exe','builder\NOTICES.txt','builder\zig\THIRD-PARTY-NOTICES.txt','builder\python\THIRD-PARTY-NOTICES.txt'){if(-not (Test-Path -LiteralPath (Join-Path $stage $need))){throw "Missing in the zip folder: $need"}}
   $files=@(Get-ChildItem -LiteralPath $stage -Recurse -File -Force)
   # Exactly the files Setup installs (its Payload and its builder list), nothing more and nothing less.
   $expected=New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)

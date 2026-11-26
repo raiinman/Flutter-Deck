@@ -1,12 +1,12 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 $fx="$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319"
 New-Item -ItemType Directory -Force .dream-loop | Out-Null
 & "$fx\csc.exe" /nologo /target:exe /out:.dream-loop\LibraryPureTest.exe LibraryCore.cs LibraryView.cs LibraryOpen.cs ..\tests\LibraryPureTest.cs DeckPaths.cs
 if($LASTEXITCODE -ne 0){throw 'Library test compile failed'}
-$t=Join-Path $Here ('.dream-loop\lib-'+[guid]::NewGuid().ToString('N').Substring(0,8))
+$t=Join-Path $FdSrc ('.dream-loop\lib-'+[guid]::NewGuid().ToString('N').Substring(0,8))
 try{
   & .\.dream-loop\LibraryPureTest.exe $t
   if($LASTEXITCODE -ne 0){throw 'Library checks failed'}

@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 Add-Type -AssemblyName System.Drawing
 # The ship artwork is not edited for controls: new controls are drawn over it. It was changed ONCE, on 2026-11-20, on the owner's word ("get rid of any images that dont affect our app but also would get me in liability trouble"): the three pictures with game characters inside its screens were painted over with a plain dark panel. This is its hash since then. The file before that change (hash 5CF478AD...) must not come back.
 if((Get-FileHash assets\ship.png).Hash -eq '5CF478ADE54D255D1EBC12347CE3975F6A50FEF31EEF6D2E0C13BB8E8EFEC427'){throw 'assets\ship.png is the old picture with the game characters in its screens; it was replaced on 2026-11-20 and must not come back'}
@@ -12,7 +12,7 @@ $have=@(Get-ChildItem assets\controls\*.png | ForEach-Object BaseName)
 foreach($n in $need){if($have -notcontains $n){throw "Missing sprite: $n"}}
 foreach($n in $have){if($need -notcontains $n){throw "Unexpected sprite: $n"}}
 foreach($n in $need){
-  $img=[System.Drawing.Bitmap]::FromFile((Join-Path $Here "assets\controls\$n.png"))
+  $img=[System.Drawing.Bitmap]::FromFile((Join-Path $FdSrc "assets\controls\$n.png"))
   try{
     if($img.PixelFormat -ne [System.Drawing.Imaging.PixelFormat]::Format32bppArgb){throw "$n is not a 32-bit image with transparency"}
     $expect=if($n -like 'lamp-*'){208}elseif($n -match '^(play|pause|stop)-'){100}else{144}
@@ -21,7 +21,7 @@ foreach($n in $need){
   }finally{$img.Dispose()}
 }
 # The four lamp frames share one window, so they line up when swapped.
-if(@('off','dim','on','bright' | ForEach-Object { $i=[System.Drawing.Image]::FromFile((Join-Path $Here "assets\controls\lamp-$_.png"));"$($i.Width)x$($i.Height)";$i.Dispose() } | Select-Object -Unique).Count -ne 1){throw 'Lamp frames differ in size'}
+if(@('off','dim','on','bright' | ForEach-Object { $i=[System.Drawing.Image]::FromFile((Join-Path $FdSrc "assets\controls\lamp-$_.png"));"$($i.Width)x$($i.Height)";$i.Dispose() } | Select-Object -Unique).Count -ne 1){throw 'Lamp frames differ in size'}
 $b=Get-Content ..\scripts\build.ps1 -Raw
 if(-not $b.Contains('"/resource:assets\controls\$($_.Name),S-$($_.BaseName)"') -or -not $b.Contains('@sprites')){throw '..\scripts\build.ps1 must embed every sprite as S-<name>'}
 $s=Get-Content Program.cs -Raw

@@ -1,8 +1,8 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Add-Type -Path (Join-Path $Here 'DeckPaths.cs'),(Join-Path $Here 'LocalSetup.cs') -ReferencedAssemblies System.Xml,System.Core
-$t=Join-Path $Here ('.dream-loop\tests-'+[Guid]::NewGuid().ToString('N'))
+Add-Type -Path (Join-Path $FdSrc 'DeckPaths.cs'),(Join-Path $FdSrc 'LocalSetup.cs') -ReferencedAssemblies System.Xml,System.Core
+$t=Join-Path $FdSrc ('.dream-loop\tests-'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $t | Out-Null
 [IO.File]::WriteAllBytes((Join-Path $t 'track.bin'),[byte[]](1,2,3))
 [IO.File]::WriteAllText((Join-Path $t 'game.cue'),'FILE "track.bin" BINARY')

@@ -2,5 +2,18 @@
   <item id="notices-and-updates" kind="announcement" date="2026-11-22T17:59:27Z"><title>How updates and notices work</title><body>This board shows notices from the Flutter Deck developer. It checks when the launcher starts, every 15 minutes while it is open, and when you press Refresh. Nothing is sent from your PC except an ordinary web request.
 
 Flutter Deck also looks for new versions by itself (see Updates). A new version replaces the launcher program only. Features that live in the game build tools, such as new game controls, come with the new Setup or the new zip from the Releases page. After installing them, press Build my game again for each game you want the new features in.</body></item>
-  <item id="release-0-4-0" kind="changelog" date="2026-11-22T04:56:16Z"><title>Flutter Deck 0.4.0 Beta</title><body>The first public beta. It launches Mega Man Legends, Mega Man Legends 2 and The Misadventures of Tron Bonne, built from your own US disc images. No game files are included. It has a Library, Build my game, Play with a friend, an in-game overlay, picture presets, a key editor, memory card saves, music, a signed updater and a per-user installer.</body></item>
+  <item id="release-0-4-2" kind="changelog" date="2026-11-26T15:16:19Z"><title>Flutter Deck 0.4.2 Beta</title><body>Flutter Deck launches Mega Man Legends, Mega Man Legends 2 and The Misadventures of Tron Bonne, built from your own US disc images. No game files are included.
+
+New in Mega Man Legends in 0.4.2:
+- A quick dodge roll on a tap of Circle (off by default, turn it on in Settings). With it on, the Jet Skates need a gamepad's left stick press first.
+- Lock-on shots can now hit high targets, the marker sits where your shots go, and lock-on no longer picks a backup target of its own.
+- Cheat codes you can switch while you play.
+- Better names in the Teleport menu, and more detail farther away.
+- Fixes for the camera after cutscenes and doors, and the save robot menu.
+
+Short instructions inside Flutter Deck explain how to use the new features. Flutter Deck also shows which builder made your game, and tells you when to build it again.
+
+Mega Man Legends keeps a record of recent play on your own PC to help find bugs. A notice explains it before you play. Nothing is sent anywhere, and you can turn it off there or in Settings.
+
+This is a Beta, so expect some rough edges. The full list is in the changelog.</body></item>
 </news>

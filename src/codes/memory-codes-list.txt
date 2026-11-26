@@ -1,0 +1,238 @@
+# Cheat codes for Mega Man Legends (USA release, SLUS-00603) that ship with Flutter Deck.
+# From the owner's own list.
+# Format: [Name], then one line per code line: AAAAAAAA VVVV (hexadecimal). A "?" stands for a digit the player picks in the overlay;
+# all the question marks of one code are the same length and take the same value. A player's own list in the game data folder
+# (memory-codes-list.txt) is read as well; an entry of the same name there replaces the one here.
+# Some codes change the game's program instead of its data; the overlay marks them "may not act", because this game runs translated code.
+
+[Air Walker]
+D00C0C26 4000
+800B51B8 0001
+
+[Always Drop Zenny Modifier]
+80046C40 00??
+80046C42 3411
+80046C4C 0005
+80046C4E 1000
+
+[Cameleon Net Always Active]
+800BBD96 06BB
+
+[Defense Shield Always Active]
+800BBD94 031E
+
+[Easy Win (Beast Hunter Mini Game)]
+800C4C52 001A
+
+[Enable Difficulty Selection]
+800C1B28 423F
+800C1B2A 423F
+800C1B2C 423F
+
+[Equipped Special Weapon Always Active Modifier]
+300B5320 000?
+
+[Equipped Special Weapon Modifier]
+300B5322 000?
+
+[Have All Normal Items]
+800BE420 FFFF
+800BE422 FFFF
+800BE424 FFFF
+800BE426 FFFF
+
+[Have All Special Items]
+800BE41C FFFF
+800BE41E FFFF
+
+[Have All Special Weapons]
+800BE410 FFFF
+
+[Have Super Mega Blaster]
+800B56AC 0776
+800B56AE 7607
+
+[Infinite Ammo-Blade Arm]
+800B56F2 0063
+
+[Infinite Ammo-Grand Grenade]
+800B56FA 0063
+
+[Infinite Ammo-Grenade Arm]
+800B56D2 0063
+
+[Infinite Ammo-Powered Buster]
+800B56C2 0063
+
+[Infinite Ammo-Shield Arm]
+800B570A 0063
+
+[Infinite Ammo-Splash Mines]
+800B5702 0063
+
+[Infinite Ammo-Splash Mines & Machine Buster]
+800B56BA 0063
+
+[Infinite Ammo-Spread Buster]
+800B56DA 0063
+
+[Infinite Health Boat & Airship]
+80100E02 2400
+800C1B6C 2800
+
+[Infinite Life]
+800B521E 00C4
+
+[Infinite Money Zenny 999999]
+800C1B2C 869F
+800C1B2E 0001
+
+[Infinite Special Weapon Power]
+800357FC D623
+800D895E 2400
+800D8B5E 2400
+800D8BBE 2400
+
+[Invincibility]
+800B521E 0050
+
+[Invincible MegaMan]
+300B52C0 0001
+
+[Invisible MegaMan]
+300B52C1 001F
+
+[Joker Command]
+D00C0C26 ????
+
+[Joker Command 2]
+D00B52CD ????
+
+[Max Zenny]
+800C1B2C 423F
+800C1B2E 000F
+
+[Mega Buster Always Enabled]
+300BE321 0001
+
+[Mega Jump]
+D00B52CC 4000
+800B51D2 FA00
+
+[Moon Jump]
+D00B52CC 4000
+300B51F7 00FE
+
+[None Event Based Special Items]
+800BE41C 03F7
+800BE41E FFFF
+
+[Speed Modifier]
+D00B51F4 0200
+800B51F4 ????
+
+[Stop The Clock (Racing Mini-Games Only)]
+800BF520 007F
+
+[Stop Timer (Balloon Fantasy Mini Game)]
+800BF160 0001
+
+[Time 00:00]
+800C1B1C 0000
+800C1B1E 0000
+
+[Unlock All Extra Modes]
+800C1B28 0001
+800C1B2A 0001
+
+[Walk Through Walls]
+D004B464 0052
+8004B466 10E0
+D00B51B8 0201
+8004B466 1000
+D004B464 0052
+8003C706 0441
+D00B51B8 0201
+8003C706 1000
+
+[Walk Through Walls L2 Up On/L2 Down Off]
+D00C0C02 FEEF
+8004B45A 2400
+D00C0C02 FEBF
+8004B45A 0C01
+
+[Equipped buster parts: slot 1 position]
+300B5668 00??
+300B5600 00??
+
+[Equipped buster parts: slot 2 position]
+300B5669 00??
+300B5601 00??
+
+[Equipped buster parts: slot 3 position]
+300B566A 00??
+300B5602 00??
+
+[Buster parts: slot 1 position]
+800B566C 00??
+800B5604 00??
+
+[Buster parts: slot 2 position]
+800B566E 00??
+800B5606 00??
+
+[Buster parts: slot 3 position]
+800B5670 00??
+800B5608 00??
+
+[Buster parts: slot 4 position]
+800B5672 00??
+800B560A 00??
+
+[Buster parts: slot 5 position]
+800B5674 00??
+800B560C 00??
+
+[Buster parts: slot 6 position]
+800B5676 00??
+800B560E 00??
+
+[Buster parts: slot 7 position]
+800B5678 00??
+800B5610 00??
+
+[Buster parts: slot 8 position]
+800B567A 00??
+800B5612 00??
+
+[Buster parts: slot 9 position]
+800B567C 00??
+800B5614 00??
+
+[Buster parts: slot 10 position]
+800B567E 00??
+800B5616 00??
+
+[Buster parts: slot 11 position]
+800B5680 00??
+800B5618 00??
+
+[Buster parts: slot 12 position]
+800B5682 00??
+800B561A 00??
+
+[Buster parts: slot 13 position]
+800B5684 00??
+800B561C 00??
+
+[Buster parts: slot 14 position]
+800B5686 00??
+800B561E 00??
+
+[Buster parts: slot 15 position]
+800B5688 00??
+800B5620 00??
+
+[Buster parts: slot 16 position]
+800B568A 00??
+800B5622 00??

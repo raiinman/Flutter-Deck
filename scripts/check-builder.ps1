@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 $fx="$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319"
 New-Item -ItemType Directory -Force .dream-loop | Out-Null
 & "$fx\csc.exe" /nologo /target:exe /out:.dream-loop\BuildPureTest.exe BuildCore.cs BuildRun.cs GameFilesOpen.cs ..\tests\BuildPureTest.cs

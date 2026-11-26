@@ -3,10 +3,10 @@
 # without the neighbouring glow), then scaled to the size the launcher draws it at twice over, for sharp results.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\make-sprites.ps1 -Pack <folder with the four sheets> [-ContactSheet <png>]
 param([Parameter(Mandatory=$true)][string]$Pack,[string]$ContactSheet='')
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 Add-Type -AssemblyName System.Drawing
 Add-Type -ReferencedAssemblies System.Drawing @'
 using System;using System.Drawing;using System.Drawing.Imaging;using System.Runtime.InteropServices;
@@ -22,7 +22,7 @@ public static class SpriteCut{
 '@
 $expected=@{'transport-states.png'='dda95919363f8626333703cd7077fab43c3866feed1260f815c2c76e40ee1803';'lamp-states.png'='d73d8472c4f3990bc7979c1ae8293d2028fcdae1094387afeff64b1a720775b7';'utility-controls.png'='40185198f5b55db466b082039d4a0999bfc9487c75a7d1d3b185030800c1298a';'supplementary-controls.png'='b3086a21afb7e896163234fabb0eeed357a49b4f5040fcf07379c5afe8125f29'}
 foreach($name in $expected.Keys){$f=Join-Path $Pack $name;if(-not (Test-Path -LiteralPath $f)){throw "Missing $name"};if((Get-FileHash -LiteralPath $f).Hash -ne $expected[$name]){throw "$name is not the version 1 sheet this script was written for"}}
-$out=Join-Path $Here 'assets\controls'
+$out=Join-Path $FdSrc 'assets\controls'
 New-Item -ItemType Directory -Force $out | Out-Null
 $made=New-Object System.Collections.Generic.List[string]
 function Save([System.Drawing.Bitmap]$sheet,[System.Drawing.Rectangle]$from,[int]$w,[int]$h,[string]$name){

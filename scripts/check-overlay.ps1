@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 $fx="$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319"
 $wpf="$fx\WPF"
 New-Item -ItemType Directory -Force .dream-loop | Out-Null
@@ -52,11 +52,16 @@ if(([regex]::Matches($allSrc,'LiveControl\.Send\(')).Count -ne 1){throw 'The lau
 if(([regex]::Matches($p,'host\.GameCommand\s*=(?!=)')).Count -ne 1){throw 'Program.cs must give the overlay its game command callback in exactly one place'}
 if(([regex]::Matches($allSrc,'liveFile')).Count -ne 3){throw 'liveFile may appear in the launcher sources only where it is made, handed to LiveControl.Send and handed to LiveControl.ReadState'}
 if(([regex]::Matches($allSrc,'ControlFilePath')).Count -ne 1){throw 'Only Program.cs may name the game control file, once; everything else goes through LiveControl'}
+if(([regex]::Matches($allSrc,'CodeBook\.(Write|Prepare|FilePath)\(')).Count -ne 1){throw 'Only Program.cs may name the codes file, once (CodeSession.Set in GameRuntime.cs writes it); the overlay asks through OverlayHost.SetCode'}
+if(([regex]::Matches($p,'host\.SetCode\s*=(?!=)')).Count -ne 1){throw 'Program.cs must give the overlay its cheat code callback in exactly one place'}
+if($p -cnotmatch 'codeSession=NewCodeSession\(session,sessionGame\)'){throw 'Program.cs must make the cheat code session when the game starts, not when the overlay attaches (an overlay attached again must keep the state)'}
 if($p -cnotmatch 'liveControl=liveCheck!=null&&liveCheck\.HasLiveControl'){throw 'Program.cs must offer live control only when the running game program reports it'}
 if($p -cnotmatch 'ControlFilePath\(GameRuntime\.DataFolderFor\(gid\)\)'){throw 'Program.cs must use the control file of the RUNNING game (gid)'}
 $gr=Get-Content GameRuntime.cs -Raw
-if($gr -cnotmatch 'check\.HasLiveControl\),StartedUtc'){throw 'GameRuntime.cs must pass the live-control choice to the play arguments'}
+if($gr -cnotmatch 'check\.HasLiveControl,codesLive,check\.HasRoll,check\.HasShotAim,lockHealthOption:check\.HasLockHealth,lockFallbackOption:check\.HasLockFallback\),StartedUtc'){throw 'GameRuntime.cs must pass the live-control choice to the play arguments'}
 if($gr -cnotmatch 'LiveControl\.Reset\(ControlFilePath\(data\)\);foreach\(string stale'){throw 'GameRuntime.cs must clear the waiting live-control commands BEFORE it deletes the old control files (a timer could otherwise write them for the new game)'}
+if($gr -cnotmatch 'check\.HasLiveCodes&&kind\.Id==1&&CodeBook\.Prepare\(data\)==null'){throw 'GameRuntime.cs must write the all-off codes file before it passes the code option'}
+if($gr -cnotmatch '" --codes-file "\)\.Append\(Quote\(CodeBook\.FilePath\(data\)\)\)\.Append\(" --codes-watch"\)'){throw 'The code option must always carry both --codes-file and --codes-watch'}
 if($gr -cnotmatch 'r\.HasLiveControl=kind\.Id==1&&fs\.Contains\("live-control"\)'){throw 'Only Legends 1 may report live control'}
 # Per-monitor screen scale: the manifest is embedded by ..\scripts\build.ps1 and the program says it targets .NET Framework 4.8 (WPF needs both).
 if(-not $b.Contains('/win32manifest:FlutterDeck.manifest')){throw '..\scripts\build.ps1 must embed FlutterDeck.manifest'}

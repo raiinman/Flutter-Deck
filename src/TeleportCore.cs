@@ -10,12 +10,12 @@ using System.Text;
 public sealed class TeleportPlace { public int Stage,Room,X,Y,Z,Facing; public string From=""; }
 
 public static class TeleportCore {
-  // Names are those of the game program's Teleport panel (rtc_telemenu.c, stage_name); each was matched to the game's own play or to a picture of the stage.
+  // Names are those of the game program's Teleport panel (rtc_telemenu.c, stage_name); each was matched to the game's own play, to the game's island map or to a picture of the stage.
   // Stage 8 is Uptown by elimination (hospital, door to the museum, harbour link; stage 29 is the town at night with rooms from stages 25, 5 and 8).
   static readonly Dictionary<int,string> Names=new Dictionary<int,string>{
-    {0,"Opening ruin"},{3,"Forest clearing and the Flutter"},{4,"Apple Market"},{5,"Downtown"},{6,"City Hall area"},{8,"Uptown"},{9,"Underground ruins"},{10,"Open field"},{12,"Forest, north road"},{13,"Harbour and boat"},
-    {14,"Cardon Forest Sub-Gate"},{15,"City Hall offices"},{16,"Huts in the hills"},{17,"River forest"},{18,"Main Gate field"},{19,"Clozer Woods Sub-Gate"},{20,"Grey ruin halls"},{25,"Old City factory"},
-    {26,"Main Gate ruins"},{27,"Forest clearing (later)"},{28,"Museum"},{29,"Town at night"}};
+    {0,"Opening ruin"},{3,"Cardon Forest and the Flutter"},{4,"Apple Market"},{5,"Downtown"},{6,"City Hall area"},{8,"Uptown"},{9,"Underground ruins"},{10,"Clozer Woods pit"},{12,"Cardon Forest, south"},{13,"Lake Jyun"},
+    {14,"Cardon Forest Sub-Gate"},{15,"City Hall offices"},{16,"Yass Plains"},{17,"Clozer Woods"},{18,"Main Gate field"},{19,"Clozer Woods Sub-Gate"},{20,"Lake Jyun Sub-Gate"},{25,"Old City"},
+    {26,"Main Gate ruins"},{27,"Cardon Forest (later)"},{28,"Museum"},{29,"Town at night"}};
   public static string StageName(int stage){string n;return Names.TryGetValue(stage,out n)?n:"Stage "+stage.ToString(CultureInfo.InvariantCulture);}
 
   // A line is "dest <stage> <room> <x> <y> <z> <facing>" and may carry text after; anything else is skipped. A place outside the ranges the

@@ -18,7 +18,9 @@ public static class Installer {
   public const string AppName="Flutter Deck",ExeName="FlutterDeck.exe",UninstallerName="Uninstall Flutter Deck.exe",Publisher="Dead Signal Interactive";
   public const string UninstallKey=@"Software\Microsoft\Windows\CurrentVersion\Uninstall\FlutterDeck";
   // Relative paths inside the install folder, in the order Setup embeds them (resources P0, P1, ...). New files go at the end.
-  public static readonly string[] Payload={"FlutterDeck.exe",@"assets\FlutterDeck-OriginalLoop.wav","LICENSE","NOTICE.md",@"assets\FlutterDeck-DawnLaunch.wav",@"assets\FlutterDeck-SkywayRun.wav"};
+  public static readonly string[] Payload={"FlutterDeck.exe",@"assets\FlutterDeck-OriginalLoop.wav","LICENSE","NOTICE.md",@"assets\FlutterDeck-DawnLaunch.wav",@"assets\FlutterDeck-SkywayRun.wav",@"codes\memory-codes-list.txt"};
+  // Folders beside the launcher that hold payload files (developer, 2026-11-24: their own list of cheat codes ships in "codes").
+  static readonly string[] PayloadFolders={"assets","codes"};
   // Files the launcher's updater can leave beside the launcher.
   public static readonly string[] Leftovers={"FlutterDeck.exe.old","FlutterDeck.exe.new","FlutterDeck.exe.rolledback","FlutterDeck.exe.old.keep"};
   const string Staging=".setup-tmp";
@@ -35,7 +37,7 @@ public static class Installer {
   }
   // A folder that is really a link to somewhere else is never installed into or cleaned out.
   static bool IsLink(string path){try{return (Directory.Exists(path)||File.Exists(path))&&(File.GetAttributes(path)&FileAttributes.ReparsePoint)!=0;}catch(Exception){return true;}}
-  static void RefuseLinks(string full){foreach(string inner in new[]{"","assets",BuilderDir,BuilderStage,BuilderOld})if(IsLink(inner.Length==0?full:Path.Combine(full,inner)))throw new InvalidOperationException("That folder is a link to another location");}
+  static void RefuseLinks(string full){foreach(string inner in new[]{"","assets","codes",BuilderDir,BuilderStage,BuilderOld})if(IsLink(inner.Length==0?full:Path.Combine(full,inner)))throw new InvalidOperationException("That folder is a link to another location");}
   // True when the folder is empty/missing, or already holds a Flutter Deck install. Setup refuses anything else.
   public static bool CanInstallInto(string folder){
     string full=Full(folder);if(File.Exists(full))return false;if(!Directory.Exists(full))return true;
@@ -52,11 +54,11 @@ public static class Installer {
   // True when the folder holds nothing but (possibly leftover) files of ours, so a failed first install can simply be retried.
   static bool OnlyOurNames(string full){
     var known=new HashSet<string>(StringComparer.OrdinalIgnoreCase);foreach(string name in KnownNames())known.Add(Path.Combine(full,name));
-    string assets=Path.Combine(full,"assets");
+    var folders=new HashSet<string>(StringComparer.OrdinalIgnoreCase);foreach(string f in PayloadFolders)folders.Add(Path.Combine(full,f));
     foreach(string entry in Directory.GetFileSystemEntries(full)){
       string leaf=Path.GetFileName(entry);
       if((String.Equals(leaf,BuilderDir,StringComparison.OrdinalIgnoreCase)||String.Equals(leaf,BuilderStage,StringComparison.OrdinalIgnoreCase)||String.Equals(leaf,BuilderOld,StringComparison.OrdinalIgnoreCase)||leaf.StartsWith(BuilderKept,StringComparison.OrdinalIgnoreCase))&&Directory.Exists(entry)&&!IsLink(entry))continue;
-      if(String.Equals(entry,assets,StringComparison.OrdinalIgnoreCase)&&Directory.Exists(entry)&&!IsLink(entry)){foreach(string inner in Directory.GetFileSystemEntries(entry))if(!known.Contains(inner)||Directory.Exists(inner))return false;continue;}
+      if(folders.Contains(entry)&&Directory.Exists(entry)&&!IsLink(entry)){foreach(string inner in Directory.GetFileSystemEntries(entry))if(!known.Contains(inner)||Directory.Exists(inner))return false;continue;}
       if(!known.Contains(entry)||Directory.Exists(entry))return false;
     }
     return true;
@@ -132,7 +134,7 @@ public static class Installer {
         try{RemoveListed(stageTools);}catch(Exception){}
       }
       // A first-time install that failed leaves no empty folders behind.
-      RemoveIfEmpty(Path.Combine(full,"assets"));RemoveIfEmpty(full);
+      foreach(string f in PayloadFolders)RemoveIfEmpty(Path.Combine(full,f));RemoveIfEmpty(full);
       throw;
     }
     foreach(string dest in targets){try{Unprotect(dest+Aside);if(File.Exists(dest+Aside))File.Delete(dest+Aside);}catch(Exception){}}
@@ -306,7 +308,7 @@ public static class Installer {
       if(name==UninstallerName&&failed.Count>0)break;
       string path=Path.Combine(full,name);try{Unprotect(path);if(File.Exists(path))File.Delete(path);}catch(Exception){failed.Add(name);}
     }
-    RemoveIfEmpty(Path.Combine(full,"assets"));RemoveIfEmpty(full);
+    foreach(string f in PayloadFolders)RemoveIfEmpty(Path.Combine(full,f));RemoveIfEmpty(full);
     return failed;
   }
   // The launcher's own settings files, by name: each file, its backup, and the temporary copies written while saving.

@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 # Widescreen setting (contracts 2.19 and 2.20, 2026-11-19). The behaviour is tested by ..\scripts\check-runtime.ps1 (..\tests\GameRuntimePureTest.cs); this adds source guards.
 $g=Get-Content GameRuntime.cs -Raw
 foreach($x in @('Widescreen=false','r.HasWidescreen=kind.Id==1&&fs.Contains("widescreen")','" --widescreen 53"','s.Widescreen=game.GetAttribute("widescreen")=="1"','writer.WriteAttributeString("widescreen",s.Widescreen?"1":"0")','public const string SkHash=')){if(-not $g.Contains($x)){throw "Missing widescreen guard in GameRuntime.cs: $x"}}

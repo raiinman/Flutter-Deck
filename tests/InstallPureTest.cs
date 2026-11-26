@@ -80,7 +80,7 @@ public static class InstallPureTest {
     File.Delete(Path.Combine(folder,"FlutterDeck.exe.old"));
 
     // a folder that merely contains a launcher (portable copy, source checkout) is not an install and is never cleaned
-    string dev=Path.Combine(root,"dev checkout");Directory.CreateDirectory(Path.Combine(dev,"assets"));
+    string dev=Path.Combine(root,"dev checkout");Directory.CreateDirectory(Path.Combine(dev,"assets"));Directory.CreateDirectory(Path.Combine(dev,"codes"));
     foreach(string name in Installer.Payload)File.WriteAllText(Path.Combine(dev,name),"source file");
     Check(!Installer.IsInstallFolder(dev),"a folder without the uninstaller is not an install");
     Throws<InvalidOperationException>(delegate{Installer.Uninstall(dev);},"uninstall of a source checkout");
@@ -113,6 +113,7 @@ public static class InstallPureTest {
     Check(failed.Count==0,"uninstall reported no failures");
     Check(File.ReadAllText(mine)=="keep me"&&Directory.GetFiles(folder,"*",SearchOption.AllDirectories).Length==1,"uninstall left only the user's own file");
     Check(!Directory.Exists(Path.Combine(folder,"assets")),"empty assets folder removed");
+    Check(!Directory.Exists(Path.Combine(folder,"codes")),"empty codes folder removed");
     File.Delete(mine);Installer.Install(folder,v1,source);failed=Installer.Uninstall(folder);
     Check(failed.Count==0&&!Directory.Exists(folder)&&Directory.Exists(Path.Combine(root,"Programs")),"clean uninstall removes the folder but not its parent");
 

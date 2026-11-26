@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-Set-Location $Here
+Set-Location $FdSrc
 # The Settings screen (developer, 2026-11-20): a clearly labelled game selector, then every setting of that game in ONE list in
 # alphabetical order, every row in the same text style. What the Settings screen showed before is Advanced Settings.
 # This is a check of the SOURCE. It was made stricter after an independent check showed twelve changes it did not catch.
@@ -40,7 +40,8 @@ if($around -cmatch 'SettingRow\('){throw 'A settings row is built outside the so
 if($list -cmatch 'page\.Children\.Add\('){throw 'Something is added to the Settings screen from inside the list without a row'}
 if($page -cmatch 'SettingRow\((?!t,)'){throw 'Every SettingRow call must take its title from the sorted list: SettingRow(t,...)'}
 if($page -cmatch '\b(?:string|var)\s+t\s*=|\(string t\)(?<!delegate\(string t\))'){throw 'The name t is for the title of a list row only'}
-if(([regex]::Matches($page,'page\.Children\.Add\(')).Count -ne 7){throw 'The Settings screen adds something outside its rows: only the game selector, the state line, the two messages with their buttons and the foot may be added directly (7 places)'}
+if(([regex]::Matches($page,'page\.Children\.Add\(')).Count -ne 8){throw 'The Settings screen adds something outside its rows: only the game selector, the state line, the builder line, the two messages with their buttons and the foot may be added directly (8 places)'}
+if($page -cnotmatch 'SetAutomationId\(builder,"settings-build"\);page\.Children\.Add\(builder\);'){throw 'The Settings screen must show the builder line under the state line'}
 if($page -cmatch 'new CheckBox'){throw 'A switch of the Settings screen must be made with Toggle(...)'}
 if($page -cmatch '(?<![A-Za-z.])Control\(|\bnew\s+(?:System\.Windows\.Controls\.)?(?:Button|ToggleButton|RepeatButton)\b'){throw 'A button of the Settings screen must be made with SetButton(...)'}
 if($page -cmatch '(?<![A-Za-z])Row\('){throw 'The Settings screen must build its rows with SettingRow, not with Row'}
@@ -65,13 +66,17 @@ $pins=@('add("Game window size",','add("Game volume",','add("Sound off at start"
   'add("Third-person controls",','add("Camera speed",','add("Invert camera up and down",','if(playCheck.HasCameraDistance)add("Camera distance",',
   'if(playCheck.HasCameraWalls)add("Camera wall collision (experimental)",','if(playCheck.HasFarView)add("Draw distance",','if(playCheck.HasZTarget)add("Target lock-on",',
   'if(playCheck.HasPadMap)add("Gamepad buttons",','add("Keyboard keys",','add("Memory card",','if(game==1)add("Widescreen (experimental)",',
+  'if(playCheck.HasDiagnostics)add("Diagnostics recording",','var dgn=Toggle(!runtime.NoDiagnostics);','runtime.NoDiagnostics=dgn.IsChecked!=true;runtime.DiagnosticsNoticeSeen=true;',
   'var mute=Toggle(runtime.Mute);','runtime.Mute=mute.IsChecked==true;','var original=Toggle(runtime.OriginalPicture);','runtime.OriginalPicture=original.IsChecked==true;',
   'var smooth=Toggle(!runtime.OriginalMovement);','runtime.OriginalMovement=smooth.IsChecked!=true;','var rb=Toggle(!runtime.NoRumble);','runtime.NoRumble=rb.IsChecked!=true;',
   'var tpBox=Toggle(runtime.Teleport);','runtime.Teleport=tpBox.IsChecked==true;','var ap=Toggle(runtime.AnalogPad);','runtime.AnalogPad=ap.IsChecked==true;',
   'var im=Toggle(!runtime.NoIntroMovie);','runtime.NoIntroMovie=im.IsChecked!=true;','var tp=Toggle(!runtime.OriginalControls);','runtime.OriginalControls=tp.IsChecked!=true;',
   'var inv=Toggle(runtime.InvertLookY);','runtime.InvertLookY=inv.IsChecked==true;','var cwall=Toggle(runtime.CameraWalls);','runtime.CameraWalls=cwall.IsChecked==true;',
-  'var zt=Toggle(!runtime.ZTargetOff);','runtime.ZTargetOff=zt.IsChecked!=true;')
+  'var zt=Toggle(!runtime.ZTargetOff);','runtime.ZTargetOff=zt.IsChecked!=true;',
+  'if(playCheck.HasRoll)add("Quick roll: tap Circle",','var qr=Toggle(runtime.Roll);','rollRefresh=delegate{qr.IsEnabled=!running&&OverlayGameSettings.RollUsable(runtime,playCheck);};rollRefresh();','runtime.OriginalMovement=smooth.IsChecked!=true;SaveRuntime();if(rollRefresh!=null)rollRefresh();','runtime.OriginalControls=tp.IsChecked!=true;SaveRuntime();if(rollRefresh!=null)rollRefresh();','runtime.Roll=qr.IsChecked==true;',
+  'if(playCheck.HasShotAim)add("Locked shots aim at the target",','var sa=Toggle(!runtime.NoShotAim);','runtime.NoShotAim=sa.IsChecked!=true;')
 foreach($x in $pins){ if(([regex]::Matches($list,[regex]::Escape($x))).Count -ne 1){throw "A setting of the Settings screen is missing, doubled, under another condition or with another sense: $x"} }
+$pg=$p.IndexOf('if(GameRuntime.DiagnosticsNoticeDue(runtime,playCheck)){'); if($pg -lt 0 -or $pg -lt $p.IndexOf('void PlayGame(){') -or $pg -gt $p.IndexOf('var session=GameRuntime.Start(')){throw 'PlayGame must show the diagnostics notice (game contract 2.42) before it starts the game'}
 $tpb=$list.IndexOf('if(playCheck.HasThirdPerson){'); if($tpb -lt 0){throw 'The third-person block of the Settings screen is missing'}
 foreach($x in @('add("Camera speed",','if(playCheck.HasCameraDistance)add(','if(playCheck.HasCameraWalls)add(','if(playCheck.HasFarView)add(','if(playCheck.HasZTarget)add(')){ if($list.IndexOf($x) -lt $tpb){throw "This camera setting must stay inside the third-person block: $x"} }
 # ---- the game selector: every game, by the game table; drawing the page never switches the game; the Library follows
@@ -89,4 +94,23 @@ if(-not $p.Contains('StretchDirection=StretchDirection.DownOnly')){throw 'A navi
 # The name of a navigation button sits inside a Viewbox. Code that reads it as the second child of the button's grid makes the launcher fail at start (seen 2026-11-20).
 if($p.Contains('(TextBlock)layout.Children[1]')){throw 'A navigation name is read as layout.Children[1]: it is the Child of the Viewbox there'}
 if(([regex]::Matches($p,[regex]::Escape('((TextBlock)((Viewbox)layout.Children[1]).Child).Text'))).Count -ne 2){throw 'The Home and Updates badges must write the navigation name through its Viewbox (2 places)'}
+# The big diagnostics notice (DeckNotice.cs): the first button is the one that means recording on, and an unanswered notice changes nothing.
+$notice=Get-Content -LiteralPath (Join-Path $FdSrc 'DeckNotice.cs') -Raw;$whole=Get-Content -LiteralPath (Join-Path $FdSrc 'Program.cs') -Raw
+if(-not $notice.Contains('var first=Control(firstLabel,delegate{answer=true;w.Close();});var second=secondLabel==null?null:Control(secondLabel,delegate{answer=false;w.Close();});')){throw 'DeckNotice.cs: the first button must answer true and the second false'}
+# The guide (GameRuntime.cs GuideTopics): every Settings row title it names in quotation marks must be a row of the Settings screen.
+$guide=[regex]::Match((Get-Content -LiteralPath (Join-Path $FdSrc 'GameRuntime.cs') -Raw),'(?s)static readonly string\[\]\[\] GuideTopics=\{(.*?)\r?\n  \};').Groups[1].Value
+if(-not $guide){throw 'GameRuntime.cs: the guide topics were not found'}
+$named=@([regex]::Matches($guide,'\\"([^"\\]+)\\"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+if($named.Count -ne 9){throw "The guide names only $($named.Count) Settings rows: the comparison is not reading it right"}
+foreach($n in $named){if($n -eq 'Build my game...'){if(-not (Get-Content -LiteralPath (Join-Path $FdSrc 'DeckLibrary.cs') -Raw).Contains('LibButton("Build my game...",')){throw 'The guide names a Library button that does not exist: Build my game...'};continue};if(-not $whole.Contains('add("'+$n+'",')){throw "The guide names a Settings row that does not exist: $n"}}
+if(-not $whole.Contains('GameRuntime.GuideShown(guideFor,guideDue,guideKit);if(guideFor==runtime)SaveRuntime();')){throw 'Program.cs: the guide shown before Play must be marked as shown and saved'}
+if(-not $whole.Contains('if((guideDue&GameRuntime.GuideBuild)!=0)return;')){throw 'Program.cs: Play must not start the old game program right after the guide told the player to build the game again'}
+if(-not $whole.Contains('SetAutomationId(open,"feature-guide-open");open.IsEnabled=!running;')){throw 'Program.cs: the guide is not opened from Settings while a game runs'}
+foreach($pair in @(@('Locked shots aim at the target','HasShotAim'),@('Target switch skips people and signs','HasLockHealth'),@('Flick to switch target','HasLockFlick'),@('Target lock-on','HasZTarget'))){if(-not $whole.Contains('if(playCheck.'+$pair[1]+')add("'+$pair[0]+'",')){throw "The lock-on topic of the guide names the row $($pair[0]), which must be shown for $($pair[1])"}}
+if(-not (Get-Content -LiteralPath (Join-Path $FdSrc 'GameRuntime.cs') -Raw).Contains('(c.HasZTarget&&c.HasLockFlick&&c.HasShotAim&&c.HasLockHealth?GuideLock:0)')){throw 'GameRuntime.cs: the lock-on topic must need every feature whose switch it names'}
+if(-not $notice.Contains('buttons[0],buttons[1],GameRuntime.DiagnosticsNoticeFirstFocused(reading,on),reading,')){throw 'DeckNotice.cs: the diagnostics notice must pass its buttons in order, and only a notice read again may close on Esc'}
+if(-not $whole.Contains('if(!GameRuntime.DiagnosticsNoticeApply(noticeFor,keepOn))return;')){throw 'Program.cs: Play must stop when the diagnostics notice is closed without an answer'}
+if(-not $whole.Contains('if(readFor!=runtime||GameRunning||!GameRuntime.DiagnosticsNoticeApply(readFor,again))return;SaveRuntime();')){throw 'Program.cs: the notice read again must change nothing without an answer'}
+if(-not $whole.Contains('keepOn=ShowDiagnosticsNotice(false,true);')){throw 'Program.cs: the notice before Play is the first-time notice of a recorder that is on'}
+if(-not $whole.Contains('again=ShowDiagnosticsNotice(true,!readFor.NoDiagnostics);')){throw 'Program.cs: the notice read again must be given the true state of the recorder'}
 Write-Output ("PASS: Settings screen (source check): game selector from the game table and followed by the Library; one list of " + ([regex]::Matches($list,'SettingRow\(t,')).Count + " row builders sorted by title, rows only inside it; $labels labels and every control in the three named text sizes; $($set.Count) settings each changed on the Settings screen only and none on the setup screen; $($pins.Count) pins of rows, conditions and switch sense; the former content is Advanced Settings. It does not prove how the page looks: see the pictures.")

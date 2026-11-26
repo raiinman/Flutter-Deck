@@ -21,9 +21,11 @@ public static class OverlayGameSettings {
   static readonly string[] DistNames={"60% (closer)","80%","100% (normal)","130%","160% (farther)"};
   static readonly string[] LookNames={"50%","75%","100%","150%","200%"};
 
+  // The quick roll works only with smooth movement: chosen, or forced by the third-person controls. The Settings screen and this panel both use this rule.
+  public static bool RollUsable(RuntimeSettings s,RuntimeCheck c){return c.HasMovementOption&&((c.HasThirdPerson&&!s.OriginalControls)||!s.OriginalMovement);}
   // A copy that later changes cannot touch: taken when the game starts, to tell what the running game was given.
   public static RuntimeSettings Copy(RuntimeSettings s){
-    return new RuntimeSettings{Program=s.Program,AcceptedHash=s.AcceptedHash,Scale=s.Scale,Volume=s.Volume,Mute=s.Mute,OriginalPicture=s.OriginalPicture,OriginalMovement=s.OriginalMovement,OriginalControls=s.OriginalControls,InvertLookY=s.InvertLookY,FreeCamera=s.FreeCamera,LockMarker2=s.LockMarker2,NoLockFlick=s.NoLockFlick,NoSkateShoot=s.NoSkateShoot,NoSkateLock=s.NoSkateLock,NoSkateToggle=s.NoSkateToggle,CameraDistance=s.CameraDistance,NoRumble=s.NoRumble,ZTargetOff=s.ZTargetOff,AimStyleCamera=s.AimStyleCamera,NoIntroMovie=s.NoIntroMovie,RumbleStrength=s.RumbleStrength,WindowHeight=s.WindowHeight,LookSensitivity=s.LookSensitivity};
+    return new RuntimeSettings{Program=s.Program,AcceptedHash=s.AcceptedHash,Scale=s.Scale,Volume=s.Volume,Mute=s.Mute,OriginalPicture=s.OriginalPicture,OriginalMovement=s.OriginalMovement,OriginalControls=s.OriginalControls,InvertLookY=s.InvertLookY,FreeCamera=s.FreeCamera,LockMarker2=s.LockMarker2,NoLockFlick=s.NoLockFlick,NoSkateShoot=s.NoSkateShoot,NoSkateLock=s.NoSkateLock,NoSkateToggle=s.NoSkateToggle,NoShotAim=s.NoShotAim,Roll=s.Roll,NoLockHealth=s.NoLockHealth,NoDiagnostics=s.NoDiagnostics,DiagnosticsNoticeSeen=s.DiagnosticsNoticeSeen,CameraDistance=s.CameraDistance,NoRumble=s.NoRumble,ZTargetOff=s.ZTargetOff,AimStyleCamera=s.AimStyleCamera,NoIntroMovie=s.NoIntroMovie,GuideSeen=s.GuideSeen,GuideBuildSeen=s.GuideBuildSeen,RumbleStrength=s.RumbleStrength,WindowHeight=s.WindowHeight,LookSensitivity=s.LookSensitivity};
   }
 
   static int Nearest(int[] steps,int value){int best=0;for(int i=1;i<steps.Length;i++)if(Math.Abs(steps[i]-value)<Math.Abs(steps[best]-value))best=i;return best;}
@@ -83,11 +85,14 @@ public static class OverlayGameSettings {
       }
       if(c.HasZTarget)l.Add(Sw("lock-on","Target lock-on",!s.ZTargetOff,thirdPerson,"Needs third-person controls")); // BuildArguments passes --lockon 1 only with third-person on
       if(c.HasLockFlick)l.Add(Sw("lock-flick","Flick to switch target",!s.NoLockFlick,thirdPerson&&c.HasZTarget&&!s.ZTargetOff,"Needs third-person controls and the target lock-on"));   // contract 2.30 (L17)
+      if(c.HasLockHealth)l.Add(Sw("lock-health","Target switch skips people and signs",!s.NoLockHealth,thirdPerson&&c.HasZTarget&&!s.ZTargetOff&&!s.NoLockFlick,"Needs third-person controls, the target lock-on and flick to switch target"));   // the backup target picker is off (--lock-fallback 0), so this only filters the flick list; game contract 2.44: on by default
       if(c.HasLockMarker2)l.Add(Sw("lock-marker-style","Legends 2 lock-on marker",s.LockMarker2,thirdPerson&&c.HasZTarget&&!s.ZTargetOff,"Needs third-person controls and the target lock-on"));   // contract 2.29 (L16)
     }
     // The Jet Skates of Legends 1 (contracts 2.31 to 2.33): all on by default
     if(c.HasSkateShoot)l.Add(Sw("skate-shoot","Shoot on the Jet Skates",!s.NoSkateShoot,true,""));
     if(c.HasSkateLock)l.Add(Sw("skate-lock","Lock on while skating",!s.NoSkateLock,thirdPerson&&c.HasZTarget&&!s.ZTargetOff,"Needs third-person controls and the target lock-on"));
+    if(c.HasRoll)l.Add(Sw("roll","Quick roll: tap Circle",s.Roll,RollUsable(s,c),"Needs smooth movement"));   // contract 2.40 (L28): with it on, a Circle hold starts the skates only after the walk switch
+    if(c.HasShotAim)l.Add(Sw("shot-aim","Locked shots aim at the target",!s.NoShotAim,true,""));   // contract 2.38 (L27): on by default
     if(c.HasSkateToggle)l.Add(Sw("skate-toggle","Hold Circle to start skates, press Circle to stop",!s.NoSkateToggle,c.HasMovementOption&&(thirdPerson||!s.OriginalMovement),"Needs smooth movement"));
     return l;
   }
@@ -117,6 +122,9 @@ public static class OverlayGameSettings {
       case "skate-shoot":s.NoSkateShoot=!on;break;
       case "skate-lock":s.NoSkateLock=!on;break;
       case "skate-toggle":s.NoSkateToggle=!on;break;
+      case "roll":s.Roll=on;break;
+      case "shot-aim":s.NoShotAim=!on;break;
+      case "lock-health":s.NoLockHealth=!on;break;
       default:return "This game program does not offer that setting.";
     }
     return "";
@@ -127,8 +135,8 @@ public static class OverlayGameSettings {
   public static bool Differs(RuntimeSettings running,RuntimeSettings now,RuntimeCheck c,GameKind kind,string cue,string data){
     try{
       if(running==null||now==null||c==null)return false;
-      return GameRuntime.BuildArguments(running,cue,data,c.HasPictureOption,c.HasWindowHeight,c.HasMovementOption,c.HasThirdPerson,c.HasPadMap,c.HasLookOptions,c.HasRumble,c.HasZTarget,kind,c.HasIntroMovie,freeCameraOption:c.HasFreeCamera,freeCameraDistanceOption:c.HasFreeCameraDistance,lockMarker2Option:c.HasLockMarker2,lockFlickOption:c.HasLockFlick,skateShootOption:c.HasSkateShoot,skateLockOption:c.HasSkateLock,skateToggleOption:c.HasSkateToggle)
-        !=GameRuntime.BuildArguments(now,cue,data,c.HasPictureOption,c.HasWindowHeight,c.HasMovementOption,c.HasThirdPerson,c.HasPadMap,c.HasLookOptions,c.HasRumble,c.HasZTarget,kind,c.HasIntroMovie,freeCameraOption:c.HasFreeCamera,freeCameraDistanceOption:c.HasFreeCameraDistance,lockMarker2Option:c.HasLockMarker2,lockFlickOption:c.HasLockFlick,skateShootOption:c.HasSkateShoot,skateLockOption:c.HasSkateLock,skateToggleOption:c.HasSkateToggle);
+      return GameRuntime.BuildArguments(running,cue,data,c.HasPictureOption,c.HasWindowHeight,c.HasMovementOption,c.HasThirdPerson,c.HasPadMap,c.HasLookOptions,c.HasRumble,c.HasZTarget,kind,c.HasIntroMovie,freeCameraOption:c.HasFreeCamera,freeCameraDistanceOption:c.HasFreeCameraDistance,lockMarker2Option:c.HasLockMarker2,lockFlickOption:c.HasLockFlick,skateShootOption:c.HasSkateShoot,skateLockOption:c.HasSkateLock,skateToggleOption:c.HasSkateToggle,diagnosticsOption:c.HasDiagnostics,rollOption:c.HasRoll,shotAimOption:c.HasShotAim,lockHealthOption:c.HasLockHealth)
+        !=GameRuntime.BuildArguments(now,cue,data,c.HasPictureOption,c.HasWindowHeight,c.HasMovementOption,c.HasThirdPerson,c.HasPadMap,c.HasLookOptions,c.HasRumble,c.HasZTarget,kind,c.HasIntroMovie,freeCameraOption:c.HasFreeCamera,freeCameraDistanceOption:c.HasFreeCameraDistance,lockMarker2Option:c.HasLockMarker2,lockFlickOption:c.HasLockFlick,skateShootOption:c.HasSkateShoot,skateLockOption:c.HasSkateLock,skateToggleOption:c.HasSkateToggle,diagnosticsOption:c.HasDiagnostics,rollOption:c.HasRoll,shotAimOption:c.HasShotAim,lockHealthOption:c.HasLockHealth);
     }catch(Exception){return false;}
   }
 }

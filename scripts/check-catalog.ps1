@@ -1,7 +1,7 @@
-﻿$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+﻿$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-$p=$Here
+$p=$FdSrc
 $s=Get-Content "$p\FeatureCatalog.cs" -Raw -Encoding UTF8
 $m=[regex]::Match($s,'Data=@"([\s\S]*?)";')
 $rows=$m.Groups[1].Value.Trim() -split '\r?\n'

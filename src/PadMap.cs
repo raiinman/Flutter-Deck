@@ -15,37 +15,46 @@ using System.Text;
 public sealed class PadMap {
   public const string Header="# Flutter Deck gamepad map for Mega Man Legends, written by the Gamepad screen of Flutter Deck.";
   public const int ButtonCount=16, DeadzoneDefault=20, DeadzoneMin=5, DeadzoneMax=50, LineLimit=512;
-  public const uint CamReset=0x10000u, Aim=0x20000u;
+  public const uint CamReset=0x10000u, Aim=0x20000u, Walk=0x40000u;
   // Physical buttons, in the order of the game's PHY_ list.
   public static readonly string[] Buttons={"A","B","X","Y","LB","RB","LT","RT","BACK","START","L3","R3","DPAD_UP","DPAD_DOWN","DPAD_LEFT","DPAD_RIGHT"};
   static readonly string[] PsNames={"CROSS","CIRCLE","SQUARE","TRIANGLE","L1","R1","L2","R2","CREATE","OPTIONS","L3","R3","DPAD_UP","DPAD_DOWN","DPAD_LEFT","DPAD_RIGHT"};
   static readonly string[] ButtonLabels={"A (Xbox) / Cross (PlayStation)","B / Circle","X / Square","Y / Triangle","LB / L1","RB / R1","LT / L2 (left trigger)","RT / R2 (right trigger)","View (Back) / Create","Menu (Start) / Options","Left stick press (L3)","Right stick press (R3)","D-pad up","D-pad down","D-pad left","D-pad right"};
   // Game actions, in the order the lists on screen show them; the bits are the game's.
-  public static readonly string[] Actions={"CROSS","CIRCLE","SQUARE","TRIANGLE","L1","R1","L2","R2","START","SELECT","UP","DOWN","LEFT","RIGHT","CAM_RESET","AIM","NONE"};
-  static readonly uint[] ActionBits={0x4000,0x2000,0x8000,0x1000,0x0400,0x0800,0x0100,0x0200,0x0008,0x0001,0x0010,0x0040,0x0080,0x0020,CamReset,Aim,0};
-  static readonly string[] ActionLabels={"Cross","Circle","Square","Triangle","L1","R1","L2","R2","Start","Select","Up","Down","Left","Right","Camera behind Mega Man (third-person only)","Aim, hold (third-person only)","Nothing"};
+  public static readonly string[] Actions={"CROSS","CIRCLE","SQUARE","TRIANGLE","L1","R1","L2","R2","START","SELECT","UP","DOWN","LEFT","RIGHT","CAM_RESET","AIM","WALK","NONE"};
+  static readonly uint[] ActionBits={0x4000,0x2000,0x8000,0x1000,0x0400,0x0800,0x0100,0x0200,0x0008,0x0001,0x0010,0x0040,0x0080,0x0020,CamReset,Aim,Walk,0};
+  static readonly string[] ActionLabels={"Cross","Circle","Square","Triangle","L1","R1","L2","R2","Start","Select","Up","Down","Left","Right","Camera behind Mega Man (third-person only)","Aim, hold (third-person only)","Walk switch: lets a Circle hold start the skates (quick roll only)","Nothing"};
   // The 14 buttons of the game's own pad (every action but the two third-person ones and NONE).
   public static readonly string[] GameButtons={"CROSS","CIRCLE","SQUARE","TRIANGLE","L1","R1","L2","R2","START","SELECT","UP","DOWN","LEFT","RIGHT"};
 
+  // True for a game program that has the walk switch (game contract 2.41, feature word 'roll'): its default map gives the left stick press the WALK action.
+  // An older program does not know the word and skips a line that names it, so for it the editor neither offers WALK nor shows it as the default.
+  // A program that reads the word WALK but was built without the quick roll does nothing with it (the game acts on the walk switch only inside its roll code),
+  // so for that program too the left stick press truly gives nothing, and the editor says so. Showing WALK there would name a button that has no effect.
+  public bool WalkKnown;
   readonly uint?[] act=new uint?[ButtonCount];   // null: not named in the file, so the game's default
   public int? Deadzone, LookSensitivity, LookInvert;   // null: not in the file
   public int NotUnderstood;                       // lines the game would not understand (it skips them)
 
   public static PadMap Defaults(){return new PadMap();}
+  public static PadMap Defaults(bool walkKnown){return new PadMap{WalkKnown=walkKnown};}
+  // The actions the editor offers: every action, but WALK only for a program that has it.
+  public static string[] ActionsFor(bool walkKnown){var l=new List<string>();foreach(string a in Actions)if(walkKnown||a!="WALK")l.Add(a);return l.ToArray();}
   public static string ButtonLabel(int i){return ButtonLabels[i];}
   public static string ActionLabel(string action){int i=Array.IndexOf(Actions,action);return i<0?action:ActionLabels[i];}
   public static uint Bit(string action){int i=Array.IndexOf(Actions,action);if(i<0)throw new ArgumentException("Unknown action "+action);return ActionBits[i];}
   // The game's defaults: padmap_default, and padmap_default_tps with the third-person controls on.
-  public static uint Default(int button,bool thirdPerson){
+  public static uint Default(int button,bool thirdPerson){return Default(button,thirdPerson,false);}
+  public static uint Default(int button,bool thirdPerson,bool walkKnown){
     switch(button){
       case 0:return 0x4000;case 1:return 0x2000;case 2:return 0x8000;case 3:return 0x1000;case 4:return 0x0400;case 5:return 0x0800;
-      case 6:return thirdPerson?Aim:0x0100;case 7:return 0x0200;case 8:return 0x0001;case 9:return 0x0008;case 10:return 0;case 11:return CamReset;
+      case 6:return thirdPerson?Aim:0x0100;case 7:return 0x0200;case 8:return 0x0001;case 9:return 0x0008;case 10:return walkKnown?Walk:0;case 11:return CamReset;
       case 12:return 0x0010;case 13:return 0x0040;case 14:return 0x0080;case 15:return 0x0020;
     }
     throw new ArgumentOutOfRangeException("button");
   }
   // What a button gives now: its own line if the file names it, else the default.
-  public uint Effective(int button,bool thirdPerson){return act[button].HasValue?act[button].Value:Default(button,thirdPerson);}
+  public uint Effective(int button,bool thirdPerson){return act[button].HasValue?act[button].Value:Default(button,thirdPerson,WalkKnown);}
   public bool IsSet(int button){return act[button].HasValue;}
   public uint? Get(int button){return act[button];}
   public void Set(int button,uint? bits){act[button]=bits;}
@@ -68,7 +77,7 @@ public sealed class PadMap {
   }
   // The same, leaving out what the game's own defaults already leave off the pad (L2 with the third-person controls, whose
   // left trigger aims): only what the player's changes took away.
-  public List<string> Lost(bool thirdPerson){var before=Defaults().Missing(thirdPerson);var lost=Missing(thirdPerson);lost.RemoveAll(before.Contains);return lost;}
+  public List<string> Lost(bool thirdPerson){var before=Defaults(WalkKnown).Missing(thirdPerson);var lost=Missing(thirdPerson);lost.RemoveAll(before.Contains);return lost;}
   // Game actions given by more than one gamepad button.
   public List<string> Shared(bool thirdPerson){
     var shared=new List<string>();
@@ -159,7 +168,7 @@ public sealed class PadMap {
     s.Append("# One setting per line; a line starting with # does nothing. Only the buttons you changed are listed:\r\n");
     s.Append("# every other button does what the game does by default. Buttons: A B X Y LB RB LT RT BACK START L3 R3\r\n");
     s.Append("# DPAD_UP DPAD_DOWN DPAD_LEFT DPAD_RIGHT (PlayStation names also work: CROSS CIRCLE SQUARE TRIANGLE L1 R1 L2 R2 CREATE OPTIONS).\r\n");
-    s.Append("# Actions: CROSS CIRCLE SQUARE TRIANGLE L1 R1 L2 R2 START SELECT UP DOWN LEFT RIGHT CAM_RESET AIM NONE; several with +.\r\n");
+    s.Append("# Actions: CROSS CIRCLE SQUARE TRIANGLE L1 R1 L2 R2 START SELECT UP DOWN LEFT RIGHT CAM_RESET AIM WALK NONE; several with +.\r\n");
     for(int i=0;i<ButtonCount;i++)if(act[i].HasValue)s.Append(Buttons[i]).Append(" = ").Append(Words(act[i].Value)).Append("\r\n");
     if(Deadzone.HasValue)s.Append("stick_deadzone = ").Append(Deadzone.Value).Append("\r\n");
     if(LookSensitivity.HasValue)s.Append("look_sensitivity = ").Append(LookSensitivity.Value).Append("\r\n");

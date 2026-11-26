@@ -1,7 +1,7 @@
-$Here = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
-Set-Location $Here
+$FdSrc = (Resolve-Path (Join-Path $PSScriptRoot '..\src')).Path # this script is in scripts/; the program is in src/
+Set-Location $FdSrc
 $ErrorActionPreference='Stop'
-$s=Get-Content (Join-Path $Here 'Program.cs') -Raw -Encoding UTF8
+$s=Get-Content (Join-Path $FdSrc 'Program.cs') -Raw -Encoding UTF8
 if($s.Contains("TargetType='ScrollBar'")){throw 'Custom scrollbar template returned'}
 if(-not $s.Contains('CanContentScroll=false') -or -not $s.Contains('ScrollToVerticalOffset(bodyScroll.VerticalOffset-e.Delta)')){throw 'Pixel/wheel scrolling guard missing'}
 $drag=[regex]::Match($s,'grip.DragDelta\+=([\s\S]*?);\s*grip.DragCompleted').Groups[1].Value
