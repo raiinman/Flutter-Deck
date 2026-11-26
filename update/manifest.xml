@@ -1,20 +1,6 @@
 <update schema='1' product='flutterdeck' channel='stable' platform='win-x64'>
-<version>0.4.1</version>
-<sequence>3</sequence>
-<file name='FlutterDeck.exe' length='4030464' sha256='336D4327C8F54E9C3A5C9639F526F4E38EB9AF3B72DF236D9D1B955F3BB8ACEF' url='https://github.com/raiinman/Flutter-Deck/releases/download/v0.4.1/FlutterDeck.exe'/>
-<notes>Flutter Deck 0.4.1 Beta
-
-New in Mega Man Legends:
-- Gamepad buttons screen: choose what each button of an Xbox or PlayStation 5 pad does, and set the stick dead zone.
-- Jet Skates: fire and lock on while skating. Hold Circle to put the skates on, press Circle to take them off. Three new switches in Settings, all on by default.
-- New lock-on marker, on by default. Optional right-stick flick to switch target.
-- In-game overlay: Pause, Full screen, Take screenshot, Mute and a game volume bar now work.
-- Widescreen: the white gaps at the left and right edges of outdoor scenes are fixed.
-
-New in the launcher:
-- The message board on the Home screen now shows real notices from the developer.
-
-IMPORTANT: a launcher update replaces the launcher only. To get the new game features, install the new Setup or zip, then press &quot;Build my game&quot; again. Games you built with 0.4.0 do not have them yet.
-
-This is a Beta, so some rough edges are expected.</notes>
+<version>0.4.2</version>
+<sequence>4</sequence>
+<file name='FlutterDeck.exe' length='4084736' sha256='07A306F6271AA7BB9F354CF33E32B8702686E83FBB9323D2612B25C09EA82644' url='https://github.com/raiinman/Flutter-Deck/releases/download/v0.4.2/FlutterDeck.exe'/>
+<notes>Happy Thanksgiving! 0.4.2 Beta brings a quick dodge roll (off by default; with it on, the Jet Skates need a gamepad&apos;s left stick press first), better lock-on, cheat codes you can switch while playing, new Teleport names, more detail farther away, and fixes for Mega Man Legends. IMPORTANT: this in-app update replaces the launcher only. To get the game changes, download the new Setup or zip, then press Build my game again. A short guide in Flutter Deck explains the new features. A record of recent play is kept on your PC to help find bugs. Nothing is sent. You can turn it off in Settings.</notes>
 </update>
