@@ -1,4 +1,22 @@
 <news version="1">
+  <item id="20261126-1729-happy-thanksgiving-0-4-2b-is-here" kind="update" date="2026-11-26T17:29:51Z"><title>Happy Thanksgiving: 0.4.2b is here</title><body>Happy Thanksgiving to everyone playing. Here is a bigger update as a thank you.
+
+Mega Man Legends:
+- A quick dodge roll on a tap of Circle (off by default, turn it on in Settings). With it on, the Jet Skates need a gamepad&apos;s left stick press first.
+- Lock-on shots can now hit high targets, the marker sits where your shots go, and lock-on no longer picks a backup target of its own.
+- Cheat codes you can switch while you play.
+- Better names in the Teleport menu, and more detail farther away.
+- Fixes for the camera after cutscenes and doors, and the save robot menu.
+
+New short instructions inside Flutter Deck explain how to use the new features.
+
+All games: Flutter Deck now shows which builder made your game, and tells you when to build it again.
+
+How to get it: download the new Setup or zip, then press &quot;Build my game&quot; again. The in-app update alone does not change your game.
+
+Mega Man Legends now keeps a record of recent play on your own PC to help find bugs. A notice explains it before you play. Nothing is sent anywhere, and you can turn it off there or in Settings.
+
+This is a Beta, so expect some rough edges. The full list is in the changelog.</body></item>
   <item id="20261123-0009-flutter-deck-0-4-1-beta-is-here" kind="update" date="2026-11-23T00:09:27Z"><title>Flutter Deck 0.4.1 Beta is here</title><body>0.4.1 Beta brings new features to Mega Man Legends.
 
 -Gamepad buttons screen: choose what each button of an Xbox or PlayStation 5 pad does.
